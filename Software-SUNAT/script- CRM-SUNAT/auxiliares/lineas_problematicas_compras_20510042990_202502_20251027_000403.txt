@@ -1,0 +1,14 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20510042990
+Periodo: 202502
+Archivo original: propuesta_compras_20510042990_202502.csv
+Fecha: 2025-10-27 00:04:03
+Columnas esperadas: 80
+Total líneas problemáticas: 1
+================================================================================
+
+Línea 3 (82 columnas):
+20510042990,PMS  DESARROLLO INMOBILIARIO  SOCIEDAD ANONIMA CERRADA,202502,2056561188801E0010000000014,25/02/2025,,01,E001,,14,,6,20565611888,TECNOLOGIA, CONSTRUCCION, INNOVACION Y COMERCIO E.I.R.L. - TCINCO E.I.R.L.,1700.00,306.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,2006.00,PEN,1.000,,,,,,,,,0.00,,D,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+

@@ -1,0 +1,14 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20603208898
+Periodo: 202507
+Archivo original: propuesta_compras_20603208898_202507.csv
+Fecha: 2025-10-26 23:36:25
+Columnas esperadas: 80
+Total líneas problemáticas: 1
+================================================================================
+
+Línea 188 (81 columnas):
+20603208898,EMPRESA DE SERVICIOS LOGISTICOS AYBAR S.A.C.,202507,2051295013301FL010000001151,11/07/2025,11/07/2025,01,FL01,,1151,,6,20512950133,LORENZO,REPRESENTACIONES Y SERVICIOS SOCIEDAD ANONIMA CERRADA - LORENZO REPRESENTACIONES Y SERVICIOS,36.36,3.64,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,40.00,PEN,1.000,,,,,,,,,0.00,,,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+

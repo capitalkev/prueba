@@ -1,0 +1,14 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20518127510
+Periodo: 202503
+Archivo original: propuesta_compras_20518127510_202503.csv
+Fecha: 2025-10-26 23:59:14
+Columnas esperadas: 80
+Total líneas problemáticas: 1
+================================================================================
+
+Línea 33 (81 columnas):
+20518127510,QUALITY CONSTRUCTION ENERGY E.I.R.L.,202503,2060658211101E0010000000689,18/03/2025,,01,E001,,689,,6,20606582111,INSTITUTO DE SEGURIDAD, SALUD OCUPACIONAL Y MEDIO AMBIENTE S. A. C.,254.24,45.76,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,300.00,PEN,1.000,,,,,,,,,0.00,,,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+

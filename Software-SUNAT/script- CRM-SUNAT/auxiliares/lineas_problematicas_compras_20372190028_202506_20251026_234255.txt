@@ -1,0 +1,14 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20372190028
+Periodo: 202506
+Archivo original: propuesta_compras_20372190028_202506.csv
+Fecha: 2025-10-26 23:42:55
+Columnas esperadas: 80
+Total líneas problemáticas: 1
+================================================================================
+
+Línea 26 (81 columnas):
+20372190028,AVP Y SEGURIDAD S.A.C.,202506,2050434974901E0010000000604,18/06/2025,,01,E001,,604,,6,20504349749,ESCUELA NACIONAL DE FORMACION Y CAPACITACION DE SERENOS, AGENTES DE SEGURIDAD Y RESGUARDO-ENFORSA,0.00,0.00,0.00,0.00,0.00,0.00,90.00,0.00,0.00,0.00,90.00,PEN,1.000,,,,,,,,,0.00,,,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+

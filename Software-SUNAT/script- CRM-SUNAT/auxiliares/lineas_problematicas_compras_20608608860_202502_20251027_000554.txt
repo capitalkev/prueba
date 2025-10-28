@@ -1,0 +1,14 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20608608860
+Periodo: 202502
+Archivo original: propuesta_compras_20608608860_202502.csv
+Fecha: 2025-10-27 00:05:54
+Columnas esperadas: 80
+Total líneas problemáticas: 1
+================================================================================
+
+Línea 9 (81 columnas):
+20608608860,EMILIANO SERVICIOS GENERALES E.I.R.L.,202502,2051582942401F0010000012092,18/02/2025,,01,F001,,12092,,6,20515829424,VERTICE EMPRESARIAL, ASESORIA & CONSULTORIA S.A.C. - VERTICE EMPRESARIAL S.A.C.,245.76,44.24,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,290.00,PEN,1.000,,,,,,,,,0.00,,,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+

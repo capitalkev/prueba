@@ -1,0 +1,14 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20502608526
+Periodo: 202505
+Archivo original: propuesta_compras_20502608526_202505.csv
+Fecha: 2025-10-26 23:50:21
+Columnas esperadas: 80
+Total líneas problemáticas: 1
+================================================================================
+
+Línea 59 (81 columnas):
+20502608526,MAKING LOGISTIC S.A.C.,202505,2054864507801F0010000002329,23/05/2025,,01,F001,,2329,,6,20548645078,GRUPO DE INSPECCIONES, LABORATORIO Y CERTIFICACIONES DEL PERU SOCIEDAD ANONIMA CERRADA - GILCSAC,350.00,63.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,413.00,PEN,1.000,,,,,,,,,0.00,,,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+

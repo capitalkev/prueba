@@ -1,0 +1,19 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20609493438
+Periodo: 202510
+Archivo original: propuesta_compras_20609493438_202510.csv
+Fecha: 2025-10-26 23:20:26
+Columnas esperadas: 80
+Total líneas problemáticas: 2
+================================================================================
+
+Línea 679 (82 columnas):
+20609493438,BEEFLOW PERU SOCIEDAD COMERCIAL DE RESPONSABILIDAD LIMITADA,202510,2060105113401FF020000001366,27/06/2025,,01,FF02,,1366,,6,20601051134,ORE,ARCE & ASOCIADOS SOCIEDAD ANONIMA CERRADA - ORE,ARCE & ASOCIADOS S.A.C.,1810.00,325.80,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,2135.80,USD,3.620,,,,,,,,,0.00,,D,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+
+Línea 814 (82 columnas):
+20609493438,BEEFLOW PERU SOCIEDAD COMERCIAL DE RESPONSABILIDAD LIMITADA,202510,2060105113407FC020000000154,27/06/2025,,07,FC02,,154,,6,20601051134,ORE,ARCE & ASOCIADOS SOCIEDAD ANONIMA CERRADA - ORE,ARCE & ASOCIADOS S.A.C.,-1810.00,-325.80,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,-2135.80,USD,3.620,27/06/2025,01,FF02,,1366,,,,0.00,,,01,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+

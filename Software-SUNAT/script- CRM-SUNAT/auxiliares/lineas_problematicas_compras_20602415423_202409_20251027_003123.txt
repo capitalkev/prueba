@@ -1,0 +1,14 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20602415423
+Periodo: 202409
+Archivo original: propuesta_compras_20602415423_202409.csv
+Fecha: 2025-10-27 00:31:23
+Columnas esperadas: 80
+Total líneas problemáticas: 1
+================================================================================
+
+Línea 54 (81 columnas):
+20602415423,SMART MANAGEMENT OP S.A.C,202409,2051295013301FL010000000702,09/09/2024,09/09/2024,01,FL01,,702,,6,20512950133,LORENZO,REPRESENTACIONES Y SERVICIOS SOCIEDAD ANONIMA CERRADA - LORENZO REPRESENTACIONES Y SERVICIOS,25.45,2.55,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,28.00,PEN,1.000,,,,,,,,,0.00,,,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+

@@ -1,0 +1,48 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.so
+.Python
+venv/
+ENV/
+env/
+
+# CSV files (generados por el script - NO subir a Git)
+*.csv
+propuesta_*.csv
+*_limpio.csv
+
+# Logs y archivos auxiliares
+auxiliares/
+*.log
+.mypy_cache/
+# Backups
+backups/
+*.sql
+*.backup
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Google Cloud
+service-account-key.json
+credentials.json
+
+# Documentación local
+CLAUDE.md

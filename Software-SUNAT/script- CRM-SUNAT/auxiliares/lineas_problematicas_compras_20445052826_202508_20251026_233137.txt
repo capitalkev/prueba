@@ -1,0 +1,24 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20445052826
+Periodo: 202508
+Archivo original: propuesta_compras_20445052826_202508.csv
+Fecha: 2025-10-26 23:31:37
+Columnas esperadas: 80
+Total líneas problemáticas: 3
+================================================================================
+
+Línea 140 (81 columnas):
+20445052826,INDUSTRIA TECNICA METALURGICA Y SERVICIOS ALVITRES PERU S.A.C.,202508,2061314260701E0010000000044,02/08/2025,,01,E001,,44,,6,20613142607,FABRICACION INGENIERIA, TECNOLOGIA Y MANTENIMIENTO INDUSTRIAL S.A.C.,2080.00,374.40,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,2454.40,PEN,1.000,,,,,,,,,0.00,,D,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+
+Línea 152 (81 columnas):
+20445052826,INDUSTRIA TECNICA METALURGICA Y SERVICIOS ALVITRES PERU S.A.C.,202508,2061314260701E0010000000045,18/08/2025,,01,E001,,45,,6,20613142607,FABRICACION INGENIERIA, TECNOLOGIA Y MANTENIMIENTO INDUSTRIAL S.A.C.,2500.00,450.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,2950.00,PEN,1.000,,,,,,,,,0.00,,D,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+
+Línea 1013 (81 columnas):
+20445052826,INDUSTRIA TECNICA METALURGICA Y SERVICIOS ALVITRES PERU S.A.C.,202508,2061314260707E0010000000017,02/08/2025,,07,E001,,17,,6,20613142607,FABRICACION INGENIERIA, TECNOLOGIA Y MANTENIMIENTO INDUSTRIAL S.A.C.,-1500.00,-270.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,-1770.00,PEN,1.000,31/07/2025,01,E001,,38,,,,0.00,,,01,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+

@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-dotenv
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+google-cloud-storage
+pandas
+openpyxl
+google-cloud-pubsub
+PyPDF2
+google-generativeai

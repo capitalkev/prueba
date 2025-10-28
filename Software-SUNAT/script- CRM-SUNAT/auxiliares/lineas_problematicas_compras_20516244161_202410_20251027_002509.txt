@@ -1,0 +1,19 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20516244161
+Periodo: 202410
+Archivo original: propuesta_compras_20516244161_202410.csv
+Fecha: 2025-10-27 00:25:09
+Columnas esperadas: 80
+Total líneas problemáticas: 2
+================================================================================
+
+Línea 3 (82 columnas):
+20516244161,UPLAND OIL AND GAS LLC SUCURSAL DEL PERU,202410,2055255652701E0010000001518,02/10/2024,,01,E001,,1518,,6,20552556527,PATRIMONIO EN FIDEICOMISO - D. LEG. 861, TITULO XI, ODEBRECHT INVERSIONES INMOBILIARIAS S.A.C. - EDI,22626.91,4072.84,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,26699.75,PEN,1.000,,,,,,,,,0.00,,D,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+
+Línea 4 (82 columnas):
+20516244161,UPLAND OIL AND GAS LLC SUCURSAL DEL PERU,202410,2055255652701E0010000001519,02/10/2024,,01,E001,,1519,,6,20552556527,PATRIMONIO EN FIDEICOMISO - D. LEG. 861, TITULO XI, ODEBRECHT INVERSIONES INMOBILIARIAS S.A.C. - EDI,11895.31,2141.16,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,14036.47,PEN,1.000,,,,,,,,,0.00,,D,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+

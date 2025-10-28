@@ -1,0 +1,14 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20605279628
+Periodo: 202411
+Archivo original: propuesta_compras_20605279628_202411.csv
+Fecha: 2025-10-27 00:19:32
+Columnas esperadas: 80
+Total líneas problemáticas: 1
+================================================================================
+
+Línea 176 (81 columnas):
+20605279628,CONSORCIO FACOMP S.A.C.,202411,2029998523801F0030000086527,08/11/2024,08/11/2024,01,F003,,86527,,6,20299985238,DISTRIBUIDORA DE ALUMINIOS, VIDRIOS Y ACCESORIOS EN GENERAL CARRASCO HERMANOS S.A.C.,68.50,12.33,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,80.83,PEN,1.000,,,,,,,,,0.00,,,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+

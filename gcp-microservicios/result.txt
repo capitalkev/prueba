@@ -1,0 +1,39 @@
+parser:
+"parsed_results": [
+    {
+      "document_id": "E001-5476",
+      "issue_date": "2025-06-02T00:00:00",
+      "due_date": "2025-07-02T00:00:00",
+      "currency": "PEN",
+      "total_amount": 494.27,
+      "net_amount": 494.27,
+      "debtor_name": "SODEXO PERU S.A.C.",
+      "debtor_ruc": "20414766308",
+      "client_name": "SERVICIOS GENERALES PROYECTOS Y CONSTRUCCION S.A.C.",
+      "client_ruc": "20539791908",
+      "valid": true,
+      "xml_filename": "FACTURAE001-547620539791908.XML"
+    }
+  ]
+
+cavali:
+{
+  "cavali_results": {
+    "FACTURAE001-547620539791908.XML": {
+      "message": "Factura duplicada en estado redimida.",
+      "process_id": 6765092,
+      "result_code": "3001"
+    }
+  }
+}
+
+drive:
+{
+  "drive_folder_url": "https://drive.google.com/drive/folders/1o4xyZfYMumKCF7eNX38dlYmKH0Xmoo1I"
+}
+
+Trello:
+{
+  "status": "created",
+  "card_id": "68deec1ba7c2c604f8ee8b36"
+}

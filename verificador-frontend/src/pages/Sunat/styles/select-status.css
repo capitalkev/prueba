@@ -1,0 +1,52 @@
+/* Estilos personalizados para el select de status (Paleta profesional) */
+
+/* Sin Gestión */
+.status-select option[value="Sin Gestión"] {
+    color: #334155;
+    font-weight: 500;
+}
+
+/* Tasa */
+.status-select option[value="Tasa"] {
+    color: #1d4ed8;
+    font-weight: 500;
+}
+
+/* Riesgo */
+.status-select option[value="Riesgo"] {
+    color: #b45309;
+    font-weight: 500;
+}
+
+/* No Califica */
+.status-select option[value="No Califica"] {
+    color: #44403c;
+    font-weight: 500;
+}
+
+/* Ganada */
+.status-select option[value="Ganada"] {
+    color: #047857;
+    font-weight: 500;
+}
+
+/* Perdida sin Gestión */
+.status-select option[value="Perdida sin Gestión"] {
+    color: #be123c;
+    font-weight: 500;
+}
+
+/* Mejorar la apariencia del select */
+.status-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+}
+
+.status-select:focus {
+    outline: none;
+    outline-offset: none;
+}

@@ -1,0 +1,14 @@
+=== LÍNEAS PROBLEMÁTICAS - COMPRAS ===
+RUC: 20610879650
+Periodo: 202502
+Archivo original: propuesta_compras_20610879650_202502.csv
+Fecha: 2025-10-27 00:06:02
+Columnas esperadas: 80
+Total líneas problemáticas: 1
+================================================================================
+
+Línea 118 (81 columnas):
+20610879650,INVERSIONES Y SERVICIOS GENERALES PROYEKTA E.I.R.L,202502,1045441001201FI010000008252,24/02/2025,,01,FI01,,8252,,6,10454410012,PLAYA DE: AVELLANEDA CABREJO, MARIA MARLENE,13.56,2.44,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,16.00,PEN,1.000,,,,,,,,,0.00,,,,1,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+--------------------------------------------------------------------------------
+
