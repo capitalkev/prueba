@@ -2,6 +2,11 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { API_BASE_URL, STATUS_COLORS, INVOICE_STATUSES } from './constants';
 import { formatCurrency, formatPeriodDisplay } from './utils/formatters';
 
+import { useAuth } from './context/AuthContext';
+import LoginPage from './LoginPage';
+import { signOut } from 'firebase/auth';
+import { auth } from './firebase';
+
 // --- Iconos SVG ---
 const BuildingOfficeIcon = ({ className = "w-6 h-6" }) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6h1.5m-1.5 3h1.5m-1.5 3h1.5M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M12.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21" /></svg>;
 const ChevronDownIcon = ({ className = "w-5 h-5" }) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>;
@@ -231,6 +236,7 @@ const PeriodSelector = ({ filter, onFilterChange }) => {
 
 // --- Componente Principal ---
 export default function App() {
+  const { firebaseUser, loading: authLoading, authError } = useAuth();
   const [clients, setClients] = useState([]);
   const [selectedClientIds, setSelectedClientIds] = useState([]);
   const [selectedCurrencies, setSelectedCurrencies] = useState([]); // Todas las monedas por defecto
@@ -253,9 +259,41 @@ export default function App() {
     has_previous: false
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loadingData, setLoadingData] = useState(false);
+  const [errorData, setErrorData] = useState(null);
+  const fetchWithAuth = async (url, options = {}) => {
+    if (!firebaseUser) {
+      console.error("fetchWithAuth: No hay usuario autenticado.");
+      throw new Error("Usuario no autenticado");
+    }
+    try {
+      const token = await firebaseUser.getIdToken();
+      const headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`
+      };
+      const response = await fetch(url, { ...options, headers });
 
+      if (response.status === 401 || response.status === 403) {
+        console.error("Error 401/403 - Forzando logout.");
+        await signOut(auth); // Desloguear si el token falla
+        throw new Error(`Error ${response.status}: No autorizado.`);
+      }
+      if (!response.ok) {
+         const errorBody = await response.text();
+         console.error(`Error ${response.status} en ${url}:`, errorBody);
+         throw new Error(`Error ${response.status} del servidor.`);
+      }
+      return response.json();
+    } catch (error) {
+      console.error("Error en fetchWithAuth:", error);
+      // Si el error es por falta de usuario (ya deslogueado), no lances otro error
+      if (error.message !== "Usuario no autenticado") {
+         setErrorData(error.message); // Muestra el error en la UI
+      }
+      throw error; // Propaga el error para detener el flujo
+    }
+  };
   // Calcular fechas desde/hasta basado en el filtro
   const { startDate, endDate, periodLabel, currentPeriod } = useMemo(() => {
     const today = new Date(); // Fecha actual del sistema
@@ -312,30 +350,26 @@ export default function App() {
 
   // Fetch clientes del período
   useEffect(() => {
+    if (!firebaseUser) return;
     const fetchClientes = async () => {
+      setErrorData(null);
       try {
-        const response = await fetch(`${API_BASE_URL}/api/ventas/empresas?periodo=${currentPeriod}`);
-        if (!response.ok) throw new Error(`Error al obtener empresas: ${response.status}`);
-        const data = await response.json();
-        const clientsFormatted = data.map(empresa => ({
-          id: empresa.ruc,
-          name: empresa.razon_social,
-          ruc: empresa.ruc
-        }));
+        const data = await fetchWithAuth(`${API_BASE_URL}/api/ventas/empresas?periodo=${currentPeriod}`); // <-- Usa fetchWithAuth
+        const clientsFormatted = data.map(e => ({ id: e.ruc, name: e.razon_social, ruc: e.ruc }));
         setClients(clientsFormatted);
       } catch (err) {
         console.error('Error fetching clientes:', err);
       }
     };
     fetchClientes();
-  }, [currentPeriod]);
+  }, [currentPeriod, firebaseUser]);
 
   // Fetch TODAS las facturas del período para métricas (sin paginación)
   useEffect(() => {
+    if (!firebaseUser || !startDate || !endDate) return;
     const fetchAllInvoicesForMetrics = async () => {
+      setErrorData(null);
       try {
-        // Verificar que tengamos fechas válidas
-        if (!startDate || !endDate) return;
 
         // Construir URL sin paginación para obtener TODAS las facturas
         let url = `${API_BASE_URL}/api/ventas?page=1&page_size=10000&fecha_desde=${startDate}&fecha_hasta=${endDate}`;
@@ -350,14 +384,9 @@ export default function App() {
             url += `&rucs_empresa=${ruc}`;
           });
         }
-
-        console.log('Fetching metrics from:', url); // Debug
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
-
-        const data = await response.json();
-        console.log('Metrics data received:', data.items.length, 'invoices'); // Debug
+        console.log('Fetching metrics from:', url);
+        const data = await fetchWithAuth(url); // <-- Usa fetchWithAuth
+        console.log('Fetched metrics data:', data.items.length);
         setAllInvoicesForMetrics(data.items);
       } catch (err) {
         console.error('Error fetching metrics data:', err);
@@ -365,10 +394,11 @@ export default function App() {
     };
 
     fetchAllInvoicesForMetrics();
-  }, [startDate, endDate, selectedClientIds, selectedCurrencies, clients.length]);
+  }, [startDate, endDate, selectedClientIds, selectedCurrencies, firebaseUser,clients.length]);
 
   // Fetch ventas paginadas
   useEffect(() => {
+    if (!firebaseUser || !startDate || !endDate) return;
     const fetchVentas = async () => {
       try {
         setLoading(true);
@@ -388,14 +418,15 @@ export default function App() {
           });
         }
 
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
-
-        const data = await response.json();
+        console.log('Fetching ventas from:', url);
+        const data = await fetchWithAuth(url);
+        console.log('Fetched ventas data:', data.items.length);
         setVentas(data.items);
-        setPagination(data.pagination);
+        setPagination(data.pagination)
       } catch (err) {
         console.error('Error fetching ventas:', err);
+        setVentas([]);
+        setPagination({ page: 1, page_size: 20, total_items: 0, total_pages: 0 });
         setError(err.message);
       } finally {
         setLoading(false);
@@ -403,7 +434,7 @@ export default function App() {
     };
 
     fetchVentas();
-  }, [startDate, endDate, currentPage, selectedClientIds, clients.length, sortBy, selectedCurrencies]);
+  }, [startDate, endDate, currentPage, selectedClientIds, clients.length, sortBy, selectedCurrencies, firebaseUser]);
 
   // Transformar ventas a invoices (para la tabla paginada)
   const invoices = useMemo(() => {
@@ -528,6 +559,45 @@ export default function App() {
       {icon} {label}
     </button>
   );
+
+  if (authLoading) {
+    // Muestra un loader mientras Firebase verifica el estado inicial
+    return (
+         <div className="bg-gray-100 font-sans h-screen w-full flex items-center justify-center">
+             <p>Verificando sesión...</p> {/* O un spinner */}
+         </div>
+    );
+  }
+
+  if (!firebaseUser) {
+    // Si no hay usuario después de verificar, muestra la página de Login
+    return <LoginPage />;
+  }
+
+  if (authError) {
+       return (
+           <div className="bg-gray-100 font-sans h-screen w-full flex items-center justify-center">
+               <div className="text-center bg-white p-8 rounded-lg shadow-md">
+                   <h2 className="text-xl font-bold text-red-600 mb-2">Error de Autenticación</h2>
+                   <p className="text-gray-600 mb-4">{authError}</p>
+                   <button onClick={async () => await signOut(auth)} className="mt-4 bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700">Cerrar Sesión</button>
+               </div>
+           </div>
+       );
+   }
+
+  if (errorData && ventas.length === 0) {
+       return (
+           <div className="bg-gray-100 font-sans h-screen w-full flex items-center justify-center">
+               <div className="text-center bg-white p-8 rounded-lg shadow-md">
+                   <h2 className="text-xl font-bold text-red-600 mb-2">Error al Cargar Datos</h2>
+                   <p className="text-gray-600 mb-4">{errorData}</p>
+                   <button onClick={() => window.location.reload()} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">Reintentar</button>
+                   <button onClick={async () => await signOut(auth)} className="mt-2 ml-2 text-sm text-gray-600 hover:underline">Cerrar Sesión</button>
+               </div>
+           </div>
+       );
+   }
 
   if (loading && ventas.length === 0) {
     return (
