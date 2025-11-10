@@ -1,4 +1,48 @@
+# Build outputs
 dist/
+build/
+*.egg-info/
+
+# Dependencies
 node_modules/
+
+# Secrets
 .env
-*.md
+.env.local
+.env.production
+*.pem
+*.key
+service_account.json
+firebase-service-account.json
+token.json
+credentials.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.so
+
+# Logs
+*.log
+logs/
+
+# CSV temporales (permitir requirements.csv)
+*.csv
+!requirements.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporal
+temp/
+tmp/
+.cache/

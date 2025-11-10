@@ -169,6 +169,8 @@ async def get_user_context(
     # Obtener RUCs autorizados según rol
     authorized_rucs = get_authorized_rucs(email, usuario.rol, db)
 
+    logging.info(f"✅ Usuario autenticado: {email}, rol: {usuario.rol}, RUCs: {authorized_rucs}")
+
     return {
         "email": email,
         "nombre": usuario.nombre,

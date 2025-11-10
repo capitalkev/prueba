@@ -54,7 +54,7 @@ export default function LoginPage() {
         className="w-full max-w-md bg-white shadow-xl border border-gray-200 rounded-2xl p-8 space-y-6"
       >
         <div className="flex justify-center">
-          <img src={logo} alt="Capital Express" className="h-14" />
+          <img src={logo} alt="Capital Express" className="h-8" />
         </div>
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-800">Acceso al Portal de Verificaciones</h1>

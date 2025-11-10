@@ -189,6 +189,10 @@ export default function NewOperationPage({ user }) {
     xmlFiles.length > 0 &&
     xmlFiles.length === pdfFiles.length &&
     respaldoFiles.length > 0 &&
+    cuenta.banco &&
+    cuenta.tipo &&
+    cuenta.numero &&
+    cuenta.moneda &&
     (!solicitarAdelanto ||
       (solicitarAdelanto &&
         parseFloat(porcentajeAdelanto) > 0 &&
@@ -272,7 +276,7 @@ export default function NewOperationPage({ user }) {
                       <Input id="mailVerificacion" name="mailVerificacion" placeholder="Ej: pagos1@deudor.com;pagos2@deudor.com" value={formData.mailVerificacion} onChange={handleInputChange} icon={<Icon name="Mail" className="text-muted" />}/>
                     </InputGroup>
                     <div>
-                      <h4 className="text-base font-medium text-gray-600 mb-2">Cuenta de Desembolso</h4>
+                      <h4 className="text-base font-medium text-gray-600 mb-2">Cuenta de Desembolso *</h4>
                       <div className="space-y-3">
                         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
                           <div className="sm:col-span-3">
@@ -296,7 +300,7 @@ export default function NewOperationPage({ user }) {
                             </select>
                           </div>
                           <div className="sm:col-span-3">
-                            <Input placeholder="Número de Cuenta" value={cuenta.numero} onChange={(e) => handleCuentaChange("numero", e.target.value.replace(/[^0-9-]/g, ""))}/>
+                            <Input placeholder="Número de Cuenta" value={cuenta.numero} onChange={(e) => handleCuentaChange("numero", e.target.value.replace(/[^0-9-]/g, ""))} required/>
                           </div>
                         </div>
                       </div>

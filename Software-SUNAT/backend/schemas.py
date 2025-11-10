@@ -37,6 +37,17 @@ class PaginatedResponse(BaseModel, Generic[T]):
             )
         )
 
+# ==================== SCHEMAS DE USUARIOS ====================
+
+class UsuarioResponse(BaseModel):
+    """Schema para respuesta de Usuario"""
+    email: str
+    nombre: str
+    rol: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # ==================== SCHEMAS DE ENROLADOS ====================
 
 class EnroladoResponse(BaseModel):
@@ -49,6 +60,14 @@ class EnroladoResponse(BaseModel):
 
 
 # ==================== SCHEMAS DE VENTAS ====================
+
+class ActualizarEstadoRequest(BaseModel):
+    """Schema para actualizar el estado1 de una factura"""
+    estado1: str  # Sin gestión, Gestionando, Ganada, Perdida
+
+class ActualizarEstadoPerdidaRequest(BaseModel):
+    """Schema para actualizar estado1 a 'Perdida' y especificar motivo en estado2"""
+    estado2: str  # Por Tasa, Por Riesgo, Deudor no califica, Cliente no interesado, Competencia, Otro
 
 class VentaResponse(BaseModel):
     """Schema para respuesta de Venta Electrónica"""
@@ -66,8 +85,80 @@ class VentaResponse(BaseModel):
     total_cp: Optional[float] = None
     moneda: Optional[str] = None
     tipo_cambio: Optional[float] = None
+    monto_original: Optional[float] = None  # Monto en moneda original (total_cp / tipo_cambio)
+    usuario_nombre: Optional[str] = None  # Nombre del usuario asociado al enrolado
+    usuario_email: Optional[str] = None  # Email del usuario asociado al enrolado
+    # Información de notas de crédito
+    nota_credito_monto: Optional[float] = None  # Monto de la nota de crédito asociada (si existe)
+    monto_neto: Optional[float] = None  # Monto después de restar la nota de crédito
+    tiene_nota_credito: bool = False  # Indica si tiene nota de crédito asociada
+    # Estados de gestión CRM
+    estado1: Optional[str] = "Sin gestión"  # Estado de gestión: Sin gestión, Gestionando, Ganada, Perdida
+    estado2: Optional[str] = None  # Motivo de pérdida cuando estado1 = Perdida
 
     model_config = ConfigDict(from_attributes=True)
+
+    @classmethod
+    def from_orm_with_calculation(cls, venta, usuario_nombre=None, usuario_email=None, nota_credito_monto=None):
+        """Crea VentaResponse calculando monto_original (total_cp / tipo_cambio) y monto_neto
+
+        Args:
+            venta: Objeto VentaElectronica
+            usuario_nombre: Nombre del usuario (opcional)
+            usuario_email: Email del usuario (opcional)
+            nota_credito_monto: Monto de la nota de crédito asociada (opcional)
+        """
+        import logging
+
+        data = {
+            "id": venta.id,
+            "ruc": venta.ruc,
+            "razon_social": venta.razon_social,
+            "periodo": venta.periodo,
+            "car_sunat": venta.car_sunat,
+            "fecha_emision": venta.fecha_emision,
+            "tipo_cp_doc": venta.tipo_cp_doc,
+            "serie_cdp": venta.serie_cdp,
+            "nro_cp_inicial": venta.nro_cp_inicial,
+            "nro_doc_identidad": venta.nro_doc_identidad,
+            "apellidos_nombres_razon_social": venta.apellidos_nombres_razon_social,
+            "total_cp": float(venta.total_cp) if venta.total_cp else None,
+            "moneda": venta.moneda,
+            "tipo_cambio": float(venta.tipo_cambio) if venta.tipo_cambio else None,
+            "usuario_nombre": usuario_nombre,
+            "usuario_email": usuario_email,
+            "estado1": venta.estado1 if (hasattr(venta, 'estado1') and venta.estado1) else "Sin gestión",
+            "estado2": venta.estado2 if hasattr(venta, 'estado2') else None,
+        }
+
+        # Calcular monto_original: SIEMPRE dividir total_cp / tipo_cambio
+        # PEN tiene tipo_cambio=1.000, USD tiene tipo_cambio real, etc.
+        if venta.total_cp and venta.tipo_cambio and venta.tipo_cambio > 0:
+            monto_calc = float(venta.total_cp) / float(venta.tipo_cambio)
+            data["monto_original"] = monto_calc
+            logging.info(f"✅ Cálculo: {venta.total_cp} / {venta.tipo_cambio} = {monto_calc} ({venta.moneda})")
+        else:
+            # Si no hay tipo_cambio válido, usar total_cp directamente
+            data["monto_original"] = float(venta.total_cp) if venta.total_cp else None
+            logging.warning(f"⚠️ Sin tipo_cambio: total_cp={venta.total_cp}, tipo_cambio={venta.tipo_cambio}")
+
+        # Calcular monto_neto y datos de nota de crédito
+        if nota_credito_monto is not None and nota_credito_monto != 0:
+            data["nota_credito_monto"] = float(nota_credito_monto)
+            data["tiene_nota_credito"] = True
+            # Calcular monto_neto: total_cp + nota_credito_monto (nota_credito_monto ya incluye el signo)
+            if data["monto_original"] is not None:
+                monto_neto_calculado = data["monto_original"] + float(nota_credito_monto)
+                # Si el resultado es negativo, redondear a 0
+                data["monto_neto"] = max(0, monto_neto_calculado)
+            else:
+                data["monto_neto"] = None
+        else:
+            data["nota_credito_monto"] = None
+            data["tiene_nota_credito"] = False
+            data["monto_neto"] = data["monto_original"]  # Sin nota de crédito, monto_neto = monto_original
+
+        return cls(**data)
 
 
 # ==================== SCHEMAS PARA EL CRM ====================

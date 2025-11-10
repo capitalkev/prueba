@@ -1,22 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { BuildingOfficeIcon, ChevronDownIcon } from '../icons';
 
 /**
  * Selector desplegable con múltiples opciones de clientes
+ * Incluye búsqueda por nombre o RUC
  */
 const MultiClientSelector = ({ clients, selectedClientIds, onSelectionChange }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [searchText, setSearchText] = useState('');
     const dropdownRef = useRef(null);
+    const searchInputRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setIsOpen(false);
+                setSearchText(''); // Limpiar búsqueda al cerrar
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    // Enfocar el input de búsqueda cuando se abre el dropdown
+    useEffect(() => {
+        if (isOpen && searchInputRef.current) {
+            searchInputRef.current.focus();
+        }
+    }, [isOpen]);
 
     const handleClientToggle = (clientId) => {
         const newSelection = selectedClientIds.includes(clientId)
@@ -35,6 +46,28 @@ const MultiClientSelector = ({ clients, selectedClientIds, onSelectionChange }) 
         return `${selectedClientIds.length} clientes seleccionados`;
     };
 
+    // Filtrar clientes por texto de búsqueda
+    const filteredClients = useMemo(() => {
+        if (!searchText.trim()) return clients;
+
+        // Dividir el texto de búsqueda en palabras individuales
+        const searchWords = searchText.toLowerCase().trim().split(/\s+/);
+
+        return clients.filter(client => {
+            const clientName = client.name.toLowerCase();
+            const clientRuc = client.ruc;
+
+            // Si busca por RUC (solo números), buscar en RUC
+            if (/^\d+$/.test(searchText.trim())) {
+                return clientRuc.includes(searchText.trim());
+            }
+
+            // Buscar que TODAS las palabras estén presentes en el nombre
+            // (en cualquier orden y posición)
+            return searchWords.every(word => clientName.includes(word));
+        });
+    }, [clients, searchText]);
+
     return (
         <div className="relative w-full md:w-96" ref={dropdownRef}>
             <button
@@ -48,7 +81,18 @@ const MultiClientSelector = ({ clients, selectedClientIds, onSelectionChange }) 
                 <ChevronDownIcon className={`h-5 w-5 text-gray-500 transition-transform ${isOpen ? 'transform rotate-180' : ''}`} />
             </button>
             {isOpen && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-80 flex flex-col">
+                <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-80 flex flex-col">
+                    <div className="p-2 border-b">
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            placeholder="Buscar por nombre o RUC..."
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
                     <div className="p-2 border-b flex gap-2">
                         <button
                             onClick={() => onSelectionChange(clients.map(c => c.id))}
@@ -64,24 +108,30 @@ const MultiClientSelector = ({ clients, selectedClientIds, onSelectionChange }) 
                         </button>
                     </div>
                     <div className="overflow-y-auto">
-                        {clients.map(client => (
-                            <div
-                                key={client.id}
-                                className="p-3 hover:bg-blue-50 cursor-pointer flex items-center"
-                                onClick={() => handleClientToggle(client.id)}
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={selectedClientIds.includes(client.id)}
-                                    readOnly
-                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3"
-                                />
-                                <div>
-                                    <p className="text-sm font-medium text-gray-900">{client.name}</p>
-                                    <p className="text-xs text-gray-500">{client.ruc}</p>
+                        {filteredClients.length > 0 ? (
+                            filteredClients.map(client => (
+                                <div
+                                    key={client.id}
+                                    className="p-3 hover:bg-blue-50 cursor-pointer flex items-center"
+                                    onClick={() => handleClientToggle(client.id)}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedClientIds.includes(client.id)}
+                                        readOnly
+                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3"
+                                    />
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900">{client.name}</p>
+                                        <p className="text-xs text-gray-500">{client.ruc}</p>
+                                    </div>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="p-4 text-center text-sm text-gray-500">
+                                No se encontraron clientes
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             )}

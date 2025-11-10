@@ -70,7 +70,6 @@ RUC_GLORIA = [
     "20131835621",
     "20511866210",
     "20481640483",
-    "999",
 ]
 
 app = FastAPI(title="Gmail Service (HTTP Direct)")
@@ -220,18 +219,26 @@ def create_gloria_excel(invoice_data_list: List[Dict]) -> (str, bytes): # type: 
 
     data_rows = []
     for invoice in invoice_data_list:
+        # Formatear número de factura: E001-987 -> E001-00000987
+        document_id = invoice.get("document_id", "")
+        if "-" in document_id:
+            parts = document_id.split("-")
+            formatted_document_id = f"{parts[0]}-{parts[1].zfill(8)}"
+        else:
+            formatted_document_id = document_id
+
         row = {
             "FACTOR": 20603596294,
-            "FECHA DE ENVIO": pd.to_datetime("today").strftime("%d/%m/%Y"),
-            "RUC PROVEEDOR": invoice.get("debtor_ruc"),
-            "PROVEEDOR": invoice.get("debtor_name"),
+            "FECHA DE ENVIO": pd.to_datetime("today").strftime("%d.%m.%Y"),
             "RUC CLIENTE": invoice.get("client_ruc"),
             "CLIENTE": invoice.get("client_name"),
-            "FECHA DE EMISION": pd.to_datetime(invoice.get("issue_date"), errors="coerce").strftime("%d/%m/%Y"),
-            "NUM FACTURA": invoice.get("document_id"),
+            "RUC PROVEEDOR": invoice.get("debtor_ruc"),
+            "PROVEEDOR": invoice.get("debtor_name"),
+            "FECHA DE EMISION": pd.to_datetime(invoice.get("issue_date"), errors="coerce").strftime("%d.%m.%Y"),
+            "NUM FACTURA": formatted_document_id,
             "IMPORTE NETO PAGAR": invoice.get("net_amount"),
             "MONEDA": invoice.get("currency"),
-            "FECHA DE VENCIMIENTO": pd.to_datetime(invoice.get("due_date"), errors="coerce").strftime("%d/%m/%Y"),
+            "FECHA DE VENCIMIENTO": pd.to_datetime(invoice.get("due_date"), errors="coerce").strftime("%d.%m.%Y"),
         }
         data_rows.append(row)
 
@@ -241,10 +248,7 @@ def create_gloria_excel(invoice_data_list: List[Dict]) -> (str, bytes): # type: 
         df.to_excel(writer, sheet_name="Facturas", index=False)
         worksheet = writer.sheets["Facturas"]
 
-        header_font = Font(bold=True, color="FFFFFF")
-        header_fill = PatternFill(
-            start_color="4F81BD", end_color="4F81BD", fill_type="solid"
-        )
+        header_font = Font(bold=True, color="000000")
         thin_border_side = Side(border_style="thin", color="000000")
         cell_border = Border(
             left=thin_border_side,
@@ -262,7 +266,6 @@ def create_gloria_excel(invoice_data_list: List[Dict]) -> (str, bytes): # type: 
 
         for cell in worksheet[1]:
             cell.font = header_font
-            cell.fill = header_fill
 
         for col_idx, column_cells in enumerate(worksheet.columns, 1):
             max_length = 0

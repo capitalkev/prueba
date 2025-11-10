@@ -4,12 +4,20 @@ export const API_BASE_URL = 'https://sunat-backend-598125168090.southamerica-wes
 
 // --- Estados de facturas ---
 export const INVOICE_STATUSES = [
-    'Sin Gestión',
-    'Tasa',
-    'Riesgo',
-    'No Califica',
+    'Sin gestión',
+    'Gestionando',
     'Ganada',
-    'Perdida sin Gestión'
+    'Perdida'
+];
+
+// --- Motivos de pérdida (estado2) ---
+export const LOSS_REASONS = [
+    'Por Tasa',
+    'Por Riesgo',
+    'Deudor no califica',
+    'Cliente no interesado',
+    'Competencia',
+    'Otro'
 ];
 
 // --- Monedas disponibles ---
@@ -20,10 +28,8 @@ export const CURRENCIES = [
 
 // --- Colores por estado (Paleta profesional) ---
 export const STATUS_COLORS = {
-    'Sin Gestión': 'text-slate-700',
-    'Tasa': 'text-blue-700',
-    'Riesgo': 'text-amber-700',
-    'No Califica': 'text-stone-700',
+    'Sin gestión': 'text-slate-700',
+    'Gestionando': 'text-amber-700',
     'Ganada': 'text-emerald-700',
-    'Perdida sin Gestión': 'text-rose-700'
+    'Perdida': 'text-rose-700'
 };

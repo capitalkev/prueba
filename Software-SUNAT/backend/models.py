@@ -326,10 +326,23 @@ class VentaSire(Base):
     dam_cp = Column(String(50), comment="DAM o comprobante de pago")
     clu = Column(String(200), comment="Campo libre de usuario")
 
+    # Estados de gestión CRM
+    estado1 = Column(
+        String(20),
+        nullable=True,  # NULL permitido para registros existentes
+        comment="Estado de gestión: Sin gestión, Gestionando, Ganada, Perdida"
+    )
+    estado2 = Column(
+        String(50),
+        nullable=True,
+        comment="Motivo de pérdida: Por Tasa, Por Riesgo, Deudor no califica, Cliente no interesado, Competencia, Otro"
+    )
+
     __table_args__ = (
         Index("idx_ventas_ruc_periodo", "ruc", "periodo"),
         Index("idx_ventas_cliente", "nro_doc_identidad"),
         Index("idx_ventas_fecha", "fecha_emision"),
+        Index("idx_ventas_estado1", "estado1"),
     )
 
     def __repr__(self):

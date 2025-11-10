@@ -48,3 +48,17 @@ class EnroladoRepository(BaseRepository[Enrolado]):
         """
         enrolados = self.get_enrolados_by_email(email)
         return [enrolado.ruc for enrolado in enrolados]
+
+    def get_enrolados_by_rucs(self, rucs: List[str]) -> List[Enrolado]:
+        """
+        Obtiene enrolados filtrados por lista de RUCs.
+
+        Args:
+            rucs: Lista de RUCs autorizados
+
+        Returns:
+            List[Enrolado]: Lista de enrolados que coinciden con los RUCs
+        """
+        if not rucs:
+            return []
+        return self.db.query(Enrolado).filter(Enrolado.ruc.in_(rucs)).all()
