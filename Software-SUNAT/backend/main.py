@@ -126,6 +126,139 @@ def health_check(db: Session = Depends(get_db)):
         raise HTTPException(status_code=503, detail=f"Database error: {str(e)}")
 
 
+@app.get("/debug/enrolados-emails")
+def debug_enrolados_emails(db: Session = Depends(get_db)):
+    """Debug endpoint - muestra enrolados y si tienen email asignado"""
+    try:
+        enrolados = db.query(Enrolado).all()
+        result = []
+        for enr in enrolados:
+            result.append({
+                "ruc": enr.ruc,
+                "razon_social": enr.razon_social,
+                "email": enr.email,
+                "tiene_email": enr.email is not None and enr.email != ""
+            })
+        return {"total": len(result), "enrolados": result}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/debug/test-metricas")
+def debug_test_metricas(
+    fecha_desde: str = Query("2025-11-01"),
+    fecha_hasta: str = Query("2025-11-30"),
+    db: Session = Depends(get_db)
+):
+    """Debug endpoint SIN AUTENTICACION para probar metricas"""
+    try:
+        from datetime import datetime
+        fecha_desde_date = datetime.strptime(fecha_desde, "%Y-%m-%d").date()
+        fecha_hasta_date = datetime.strptime(fecha_hasta, "%Y-%m-%d").date()
+
+        # Query sin filtro de usuarios
+        query = db.query(
+            VentaElectronica.moneda,
+            func.sum(VentaElectronica.total_cp).label('total_facturado'),
+            func.count(VentaElectronica.id).label('cantidad')
+        ).filter(
+            VentaElectronica.fecha_emision >= fecha_desde_date,
+            VentaElectronica.fecha_emision <= fecha_hasta_date,
+            VentaElectronica.tipo_cp_doc != '7',
+            ~VentaElectronica.serie_cdp.like('B%')
+        ).group_by(VentaElectronica.moneda)
+
+        results = query.all()
+
+        return {
+            "fecha_desde": fecha_desde,
+            "fecha_hasta": fecha_hasta,
+            "resultados": [
+                {
+                    "moneda": row.moneda,
+                    "total": float(row.total_facturado or 0),
+                    "cantidad": row.cantidad
+                }
+                for row in results
+            ]
+        }
+    except Exception as e:
+        return {"error": str(e), "type": type(e).__name__}
+
+@app.get("/debug/usuarios")
+def debug_usuarios(db: Session = Depends(get_db)):
+    """Debug endpoint - muestra usuarios registrados"""
+    try:
+        usuarios = db.query(Usuario).all()
+        return {
+            "total": len(usuarios),
+            "usuarios": [
+                {
+                    "email": u.email,
+                    "nombre": u.nombre,
+                    "rol": u.rol
+                }
+                for u in usuarios
+            ]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/debug/mi-contexto")
+async def debug_mi_contexto(user_context: dict = Depends(get_user_context), db: Session = Depends(get_db)):
+    """Debug endpoint AUTENTICADO - muestra el contexto del usuario actual"""
+    try:
+        # También ejecutar el query de métricas con los mismos parámetros
+        fecha_desde = datetime(2025, 11, 1).date()
+        fecha_hasta = datetime(2025, 11, 30).date()
+
+        is_admin = user_context["authorized_rucs"] is None
+        authorized_rucs = user_context["authorized_rucs"]
+
+        query_sql = """
+            SELECT
+                moneda,
+                SUM(CASE WHEN tipo_cp_doc != '7' AND serie_cdp NOT LIKE 'B%%' THEN total_cp ELSE 0 END)::numeric as total_facturado,
+                COUNT(CASE WHEN tipo_cp_doc != '7' AND serie_cdp NOT LIKE 'B%%' THEN id END)::integer as cantidad
+            FROM ventas_sire
+            WHERE fecha_emision >= :fecha_desde
+              AND fecha_emision <= :fecha_hasta
+        """
+
+        params = {
+            'fecha_desde': fecha_desde,
+            'fecha_hasta': fecha_hasta
+        }
+
+        # Mostrar si se aplicaría filtro de RUC
+        filtro_aplicado = "NINGUNO (admin = acceso total)"
+        if not is_admin and authorized_rucs:
+            query_sql += " AND ruc = ANY(:authorized_rucs)"
+            params['authorized_rucs'] = authorized_rucs
+            filtro_aplicado = f"authorized_rucs = {authorized_rucs}"
+
+        query_sql += " GROUP BY moneda"
+
+        result = db.execute(text(query_sql), params)
+        resultados = result.fetchall()
+
+        return {
+            "user_context": user_context,
+            "is_admin": is_admin,
+            "filtro_sql_aplicado": filtro_aplicado,
+            "query_sql": query_sql,
+            "params": str(params),
+            "resultados_metricas": [
+                {
+                    "moneda": row.moneda,
+                    "total": float(row.total_facturado),
+                    "cantidad": row.cantidad
+                }
+                for row in resultados
+            ]
+        }
+    except Exception as e:
+        return {"error": str(e), "type": type(e).__name__}
+
 @app.get("/debug/columns")
 def debug_columns(db: Session = Depends(get_db)):
     """Debug endpoint - muestra las columnas reales de ventas_sire y compras_sire"""
@@ -527,23 +660,6 @@ def actualizar_estado_perdida(
 # ==================== ENDPOINTS DE MÉTRICAS ====================
 
 
-@app.get("/api/metricas/{periodo}", response_model=MetricasResponse)
-def get_metricas_periodo(
-    periodo: str,
-    ruc_empresa: Optional[str] = None,
-    user_context: dict = Depends(get_user_context),
-    db: Session = Depends(get_db)
-):
-    """
-    Obtiene métricas agregadas de un periodo usando SQL optimizado.
-    Autenticación OBLIGATORIA: Filtra por RUCs según rol del usuario.
-    Admin ve todo, usuarios normales solo ven sus enrolados asignados.
-    """
-    repo = VentaRepository(db)
-    authorized_rucs = user_context["authorized_rucs"]  # None si es admin
-    return repo.get_metricas_periodo(periodo=periodo, ruc=ruc_empresa, authorized_rucs=authorized_rucs)
-
-
 @app.get("/api/metricas/resumen")
 def get_metricas_resumen(
     fecha_desde: str = Query(..., description="Fecha inicio YYYY-MM-DD"),
@@ -569,65 +685,87 @@ def get_metricas_resumen(
         authorized_rucs = user_context["authorized_rucs"]
         is_admin = authorized_rucs is None
 
-        logger.info(f"🔐 [Métricas] Usuario: {user_context.get('email')}, Admin: {is_admin}")
+        logger.info("=" * 80)
+        logger.info(f"🔐 [Métricas] Usuario: {user_context.get('email')}, Rol: {user_context.get('rol')}")
+        logger.info(f"🔐 [Métricas] Admin: {is_admin}, Authorized RUCs: {authorized_rucs}")
         logger.info(f"📅 [Métricas] Rango: {fecha_desde} a {fecha_hasta}")
-        logger.info(f"🎯 [Métricas] Filtros: rucs={rucs_empresa}, moneda={moneda}, usuarios={usuario_emails}")
+        logger.info(f"🎯 [Métricas] Filtros recibidos:")
+        logger.info(f"   - rucs_empresa: {rucs_empresa}")
+        logger.info(f"   - moneda: {moneda}")
+        logger.info(f"   - usuario_emails: {usuario_emails}")
 
         # Convertir fechas
         fecha_desde_date = datetime.strptime(fecha_desde, "%Y-%m-%d").date()
         fecha_hasta_date = datetime.strptime(fecha_hasta, "%Y-%m-%d").date()
+        logger.info(f"📅 [Métricas] Fechas convertidas: {fecha_desde_date} a {fecha_hasta_date}")
 
         # Intentar usar materialized view (ULTRA RÁPIDO)
         try:
             logger.info("🔄 [Métricas] Intentando usar Materialized View...")
 
-            # Si es admin, no filtrar por RUC (ver todos)
-            if is_admin:
-                query = db.execute(text("""
-                    SELECT
-                        moneda,
-                        SUM(total_facturado)::numeric as total_facturado,
-                        SUM(monto_ganado)::numeric as monto_ganado,
-                        SUM(monto_disponible)::numeric as monto_disponible,
-                        SUM(cantidad_facturas)::integer as cantidad
-                    FROM mv_metricas_diarias
-                    WHERE fecha_emision >= :fecha_desde
-                      AND fecha_emision <= :fecha_hasta
-                      AND (:filter_rucs IS NULL OR ruc = ANY(:filter_rucs))
-                      AND (:filter_moneda IS NULL OR moneda = ANY(:filter_moneda))
-                    GROUP BY moneda
-                """), {
-                    'fecha_desde': fecha_desde_date,
-                    'fecha_hasta': fecha_hasta_date,
-                    'filter_rucs': rucs_empresa if rucs_empresa else None,
-                    'filter_moneda': moneda if moneda else None
-                })
-            else:
-                # Usuario normal: filtrar por RUCs autorizados
-                query = db.execute(text("""
-                    SELECT
-                        moneda,
-                        SUM(total_facturado)::numeric as total_facturado,
-                        SUM(monto_ganado)::numeric as monto_ganado,
-                        SUM(monto_disponible)::numeric as monto_disponible,
-                        SUM(cantidad_facturas)::integer as cantidad
-                    FROM mv_metricas_diarias
-                    WHERE fecha_emision >= :fecha_desde
-                      AND fecha_emision <= :fecha_hasta
-                      AND ruc = ANY(:authorized_rucs)
-                      AND (:filter_rucs IS NULL OR ruc = ANY(:filter_rucs))
-                      AND (:filter_moneda IS NULL OR moneda = ANY(:filter_moneda))
-                    GROUP BY moneda
-                """), {
-                    'fecha_desde': fecha_desde_date,
-                    'fecha_hasta': fecha_hasta_date,
-                    'authorized_rucs': authorized_rucs,
-                    'filter_rucs': rucs_empresa if rucs_empresa else None,
-                    'filter_moneda': moneda if moneda else None
-                })
+            # Query SIMPLIFICADA - solo suma directa de ventas_sire
+            query_sql = """
+                SELECT
+                    moneda,
+                    SUM(CASE WHEN tipo_cp_doc != '7' AND serie_cdp NOT LIKE 'B%%' THEN total_cp ELSE 0 END)::numeric as total_facturado,
+                    SUM(CASE WHEN estado1 = 'Ganada' AND tipo_cp_doc != '7' AND serie_cdp NOT LIKE 'B%%' THEN total_cp ELSE 0 END)::numeric as monto_ganado,
+                    SUM(CASE WHEN (estado1 IS NULL OR (estado1 != 'Ganada' AND estado1 != 'Perdida')) AND tipo_cp_doc != '7' AND serie_cdp NOT LIKE 'B%%' THEN total_cp ELSE 0 END)::numeric as monto_disponible,
+                    COUNT(CASE WHEN tipo_cp_doc != '7' AND serie_cdp NOT LIKE 'B%%' THEN id END)::integer as cantidad
+                FROM ventas_sire
+                WHERE fecha_emision >= :fecha_desde
+                  AND fecha_emision <= :fecha_hasta
+            """
 
+            params = {
+                'fecha_desde': fecha_desde_date,
+                'fecha_hasta': fecha_hasta_date
+            }
+
+            # Agregar filtros opcionales solo si se especifican
+            if rucs_empresa and len(rucs_empresa) > 0:
+                logger.info(f"   ✓ Aplicando filtro rucs_empresa: {rucs_empresa}")
+                query_sql += " AND ruc = ANY(:filter_rucs)"
+                params['filter_rucs'] = rucs_empresa
+            elif not is_admin and authorized_rucs:
+                logger.info(f"   ✓ Aplicando filtro authorized_rucs (no admin): {authorized_rucs}")
+                query_sql += " AND ruc = ANY(:authorized_rucs)"
+                params['authorized_rucs'] = authorized_rucs
+            else:
+                logger.info(f"   ✓ NO se aplica filtro de RUC (admin o sin filtros)")
+
+            if moneda and len(moneda) > 0:
+                logger.info(f"   ✓ Aplicando filtro moneda: {moneda}")
+                query_sql += " AND moneda = ANY(:filter_moneda)"
+                params['filter_moneda'] = moneda
+
+            # SOLO filtrar por usuario_emails si NO es admin y se especifica explícitamente
+            # ADMIN SIEMPRE VE TODAS LAS FACTURAS (sin filtro de usuario)
+            if not is_admin and usuario_emails and len(usuario_emails) > 0:
+                logger.info(f"   ✓ Aplicando filtro usuario_emails (no admin): {usuario_emails}")
+                query_sql += """
+                    AND ruc IN (
+                        SELECT ruc FROM enrolados WHERE email = ANY(:filter_usuarios)
+                    )
+                """
+                params['filter_usuarios'] = usuario_emails
+            elif is_admin and usuario_emails and len(usuario_emails) > 0:
+                logger.info(f"   ✓ IGNORANDO filtro usuario_emails (usuario es ADMIN - ve todo)")
+
+            query_sql += " GROUP BY moneda"
+
+            logger.info(f"📝 [Métricas] Query SQL completo:")
+            logger.info(query_sql)
+            logger.info(f"📝 [Métricas] Parámetros: {params}")
+
+            query = db.execute(text(query_sql), params)
             results = query.fetchall()
-            logger.info(f"✅ [Métricas] MV consultada - Filas retornadas: {len(results)}")
+
+            logger.info(f"✅ [Métricas] Query ejecutada - Filas retornadas: {len(results)}")
+            if results:
+                for row in results:
+                    logger.info(f"   📊 {row.moneda}: Total={row.total_facturado}, Ganado={row.monto_ganado}, Disponible={row.monto_disponible}, Cantidad={row.cantidad}")
+            else:
+                logger.warning(f"   ⚠️ NO SE ENCONTRARON RESULTADOS")
 
         except Exception as mv_error:
             # FALLBACK: Si MV no existe, usar query directo
@@ -653,6 +791,8 @@ def get_metricas_resumen(
                     )
                 ).label('monto_disponible'),
                 func.count(VentaElectronica.id).label('cantidad')
+            ).join(
+                Enrolado, VentaElectronica.ruc == Enrolado.ruc, isouter=True
             ).filter(
                 VentaElectronica.fecha_emision >= fecha_desde_date,
                 VentaElectronica.fecha_emision <= fecha_hasta_date,
@@ -669,6 +809,14 @@ def get_metricas_resumen(
 
             if moneda and len(moneda) > 0:
                 query = query.filter(VentaElectronica.moneda.in_(moneda))
+
+            # Aplicar filtro de usuarios SOLO si NO es admin
+            # ADMIN SIEMPRE VE TODAS LAS FACTURAS
+            if not is_admin and usuario_emails and len(usuario_emails) > 0:
+                query = query.filter(Enrolado.email.in_(usuario_emails))
+                logger.info(f"   ✓ [FALLBACK] Aplicando filtro usuario_emails (no admin): {usuario_emails}")
+            elif is_admin and usuario_emails and len(usuario_emails) > 0:
+                logger.info(f"   ✓ [FALLBACK] IGNORANDO filtro usuario_emails (usuario es ADMIN - ve todo)")
 
             query = query.group_by(VentaElectronica.moneda)
             results = query.all()
@@ -687,9 +835,16 @@ def get_metricas_resumen(
                 "montoDisponible": float(row.monto_disponible or 0),
                 "cantidad": int(row.cantidad or 0)
             }
-            logger.info(f"💰 [Métricas] {moneda_key}: total={metricas[moneda_key]['totalFacturado']}, disponible={metricas[moneda_key]['montoDisponible']}")
+            logger.info(f"💰 [Métricas] Procesando {moneda_key}:")
+            logger.info(f"   Total Facturado: {metricas[moneda_key]['totalFacturado']:,.2f}")
+            logger.info(f"   Monto Ganado: {metricas[moneda_key]['montoGanado']:,.2f}")
+            logger.info(f"   Monto Disponible: {metricas[moneda_key]['montoDisponible']:,.2f}")
+            logger.info(f"   Cantidad: {metricas[moneda_key]['cantidad']}")
 
-        logger.info(f"📤 [Métricas] Respuesta final: PEN={metricas['PEN']['totalFacturado']}, USD={metricas['USD']['totalFacturado']}")
+        logger.info("📤 [Métricas] Respuesta final que se enviará al frontend:")
+        logger.info(f"   PEN: {metricas['PEN']}")
+        logger.info(f"   USD: {metricas['USD']}")
+        logger.info("=" * 80)
         return metricas
 
     except HTTPException:
@@ -697,6 +852,23 @@ def get_metricas_resumen(
     except Exception as e:
         logger.error(f"❌ [Métricas] Error crítico: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error al obtener métricas: {str(e)}")
+
+
+@app.get("/api/metricas/{periodo}", response_model=MetricasResponse)
+def get_metricas_periodo(
+    periodo: str,
+    ruc_empresa: Optional[str] = None,
+    user_context: dict = Depends(get_user_context),
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene métricas agregadas de un periodo usando SQL optimizado.
+    Autenticación OBLIGATORIA: Filtra por RUCs según rol del usuario.
+    Admin ve todo, usuarios normales solo ven sus enrolados asignados.
+    """
+    repo = VentaRepository(db)
+    authorized_rucs = user_context["authorized_rucs"]  # None si es admin
+    return repo.get_metricas_periodo(periodo=periodo, ruc=ruc_empresa, authorized_rucs=authorized_rucs)
 
 
 # ==================== ENDPOINTS DE COMPRAS ====================
