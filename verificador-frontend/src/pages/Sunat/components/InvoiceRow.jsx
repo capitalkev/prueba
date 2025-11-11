@@ -1,95 +1,83 @@
 import React from 'react';
 import { formatCurrency } from '../utils/formatters';
-import { STATUS_COLORS } from '../constants';
+import { INVOICE_STATUSES } from '../constants';
 
 const InvoiceRow = React.memo(({
     invoice,
     isSelected,
     onToggleSelection,
-    onStatusChange,
-    onViewCompany,
-    selectMode,
-    showCheckboxes
+    onStatusChange
 }) => {
-    const rowClassName = `
-        border-b hover:bg-gray-50 transition-colors cursor-pointer
-        ${isSelected ? 'bg-blue-50' : ''}
-    `;
-
-    const statusColor = STATUS_COLORS[invoice.status] || 'bg-gray-100 text-gray-600';
+    const isZeroAmount = invoice.montoNeto === 0;
+    const rowClassName = isZeroAmount
+        ? "bg-gray-100 border-b opacity-60 cursor-not-allowed"
+        : "bg-white border-b hover:bg-gray-50";
 
     return (
         <tr className={rowClassName}>
-            {showCheckboxes && (
-                <td className="py-3 px-2 text-center">
-                    <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => onToggleSelection(invoice.key)}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-2"
-                    />
-                </td>
-            )}
-
-            <td className="py-3 px-4">
-                <button
-                    onClick={() => onViewCompany(invoice.clientId)}
-                    className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-sm"
-                >
-                    {invoice.clientName}
-                </button>
-                <div className="text-xs text-gray-500">RUC: {invoice.clientId}</div>
+            <td className="px-4 py-4">
+                <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => !isZeroAmount && onToggleSelection(invoice.key)}
+                    disabled={isZeroAmount}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
             </td>
 
-            <td className="py-3 px-4 text-sm">{invoice.id}</td>
+            <td className="px-4 py-4 text-sm text-gray-600">{invoice.usuario}</td>
 
-            <td className="py-3 px-4 text-sm">
-                <div>{invoice.debtor}</div>
-                <div className="text-xs text-gray-500">RUC: {invoice.debtorRuc}</div>
-            </td>
+            <td className="px-4 py-4 font-medium text-gray-800">{invoice.clientName}</td>
 
-            <td className="py-3 px-4 text-sm text-right font-medium">
-                <div>{formatCurrency(invoice.amount, invoice.currency)}</div>
-                {invoice.amount !== invoice.netAmount && (
-                    <div className="text-xs text-gray-500">
-                        Neto: {formatCurrency(invoice.netAmount, invoice.currency)}
+            <td className="px-4 py-4 font-medium text-gray-900">{invoice.id}</td>
+
+            <td className="px-4 py-4">{invoice.debtor}</td>
+
+            <td className="px-4 py-4">
+                {invoice.tieneNotaCredito ? (
+                    <div className="font-mono">
+                        <div className={isZeroAmount ? 'text-gray-600' : 'text-gray-900'}>
+                            {formatCurrency(invoice.montoNeto, invoice.currency)}
+                            {isZeroAmount && <span className="ml-2 text-xs text-gray-500">(Anulada)</span>}
+                        </div>
+                        <div className="text-xs line-through text-red-500">
+                            orig. {formatCurrency(invoice.amount, invoice.currency)}
+                        </div>
                     </div>
+                ) : (
+                    <span className="font-mono">{formatCurrency(invoice.amount, invoice.currency)}</span>
                 )}
             </td>
 
-            <td className="py-3 px-4 text-sm text-center">{invoice.currency}</td>
+            <td className="px-4 py-4">{invoice.emissionDate}</td>
 
-            <td className="py-3 px-4 text-sm">{invoice.emissionDate}</td>
-
-            <td className="py-3 px-4">
-                <select
-                    value={invoice.status}
-                    onChange={(e) => onStatusChange(invoice.ventaId, e.target.value, invoice.estado2)}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColor}`}
-                >
-                    <option value="Nueva Oportunidad">Nueva Oportunidad</option>
-                    <option value="Contactado">Contactado</option>
-                    <option value="Negociación">Negociación</option>
-                    <option value="Ganada">Ganada</option>
-                    <option value="Perdida">Perdida</option>
-                    <option value="Sin gestión">Sin gestión</option>
-                </select>
-            </td>
-
-            <td className="py-3 px-4 text-sm">
-                {invoice.usuarioNombre || invoice.usuarioEmail || '-'}
+            <td className="px-4 py-4">
+                <div>
+                    <select
+                        value={invoice.status}
+                        onChange={(e) => !isZeroAmount && onStatusChange(invoice, e.target.value)}
+                        disabled={isZeroAmount}
+                        className="text-xs p-1 rounded-md border-gray-300 font-semibold focus:ring-1 w-full bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {INVOICE_STATUSES.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                    {invoice.estado2 && (
+                        <div className="text-xs text-gray-500 mt-1">
+                            {invoice.estado2}
+                        </div>
+                    )}
+                </div>
             </td>
         </tr>
     );
 }, (prevProps, nextProps) => {
-    // Custom comparison - solo re-render si cambian propiedades relevantes
+    // Solo re-render si cambian propiedades relevantes
     return (
-        prevProps.invoice.ventaId === nextProps.invoice.ventaId &&
+        prevProps.invoice.key === nextProps.invoice.key &&
         prevProps.invoice.status === nextProps.invoice.status &&
-        prevProps.invoice.amount === nextProps.invoice.amount &&
-        prevProps.invoice.netAmount === nextProps.invoice.netAmount &&
-        prevProps.isSelected === nextProps.isSelected &&
-        prevProps.selectMode === nextProps.selectMode
+        prevProps.invoice.montoNeto === nextProps.invoice.montoNeto &&
+        prevProps.invoice.estado2 === nextProps.invoice.estado2 &&
+        prevProps.isSelected === nextProps.isSelected
     );
 });
 

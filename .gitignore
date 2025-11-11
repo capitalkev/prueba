@@ -23,7 +23,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.so
-
+.md
 # Logs
 *.log
 logs/

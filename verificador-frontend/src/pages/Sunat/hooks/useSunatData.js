@@ -9,7 +9,10 @@ import { auth } from '../../../firebase';
  */
 export const useSunatData = (firebaseUser, dateFilter, selectedClientIds, selectedCurrencies, selectedUserEmails, currentPage, sortBy, clients, users, viewMode = 'detailed') => {
     const [ventas, setVentas] = useState([]);
-    const [allInvoicesForMetrics, setAllInvoicesForMetrics] = useState([]);
+    const [metrics, setMetrics] = useState({
+        PEN: { totalFacturado: 0, montoGanado: 0, montoDisponible: 0, cantidad: 0 },
+        USD: { totalFacturado: 0, montoGanado: 0, montoDisponible: 0, cantidad: 0 }
+    });
     const [pagination, setPagination] = useState({
         page: 1,
         page_size: 20,
@@ -19,6 +22,7 @@ export const useSunatData = (firebaseUser, dateFilter, selectedClientIds, select
         has_previous: false
     });
     const [loading, setLoading] = useState(false);
+    const [metricsLoading, setMetricsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [errorData, setErrorData] = useState(null);
 
@@ -126,58 +130,72 @@ export const useSunatData = (firebaseUser, dateFilter, selectedClientIds, select
         };
     }, [dateFilter]);
 
-    // Fetch TODAS las facturas del período para métricas (sin paginación)
+    // Fetch métricas optimizadas desde /api/metricas/resumen
     useEffect(() => {
         if (!firebaseUser || !startDate || !endDate) return;
 
-        const fetchAllInvoicesForMetrics = async () => {
+        const fetchMetrics = async () => {
+            setMetricsLoading(true);
             setErrorData(null);
-            try {
-                // Construir URL base
-                let url = `${API_BASE_URL}/api/ventas?page=1&page_size=10000&fecha_desde=${startDate}&fecha_hasta=${endDate}`;
 
-                // Aplicar filtro de monedas (solo si hay exactamente 1 seleccionada)
-                if (selectedCurrencies.length === 1) {
-                    url += `&moneda=${selectedCurrencies[0]}`;
+            try {
+                // Construir URL del nuevo endpoint optimizado
+                const params = new URLSearchParams({
+                    fecha_desde: startDate,
+                    fecha_hasta: endDate
+                });
+
+                // Aplicar filtro de monedas
+                if (selectedCurrencies.length > 0) {
+                    selectedCurrencies.forEach(currency => params.append('moneda', currency));
                 }
 
-                // Aplicar filtro de clientes (si hay clientes seleccionados y no son todos)
+                // Aplicar filtro de clientes
                 const shouldFilterClients = selectedClientIds.length > 0 &&
                                           (clients.length === 0 || selectedClientIds.length < clients.length);
                 if (shouldFilterClients) {
-                    selectedClientIds.forEach(ruc => {
-                        url += `&rucs_empresa=${ruc}`;
-                    });
+                    selectedClientIds.forEach(ruc => params.append('rucs_empresa', ruc));
                 }
 
-                // Aplicar filtro de usuarios (si hay usuarios seleccionados y no son todos)
-                const totalUserOptions = users.length + 1; // +1 por "Sin asignar"
+                // Aplicar filtro de usuarios
+                const totalUserOptions = users.length + 1;
                 const shouldFilterUsers = selectedUserEmails.length > 0 &&
                                         (users.length === 0 || selectedUserEmails.length < totalUserOptions);
 
-                console.log('📈 [Metrics] Construyendo filtros:', {
-                    selectedUserEmails,
-                    users_length: users.length,
-                    totalUserOptions,
-                    shouldFilterUsers
-                });
-
                 if (shouldFilterUsers) {
-                    selectedUserEmails.forEach(email => {
-                        url += `&usuario_emails=${email}`;
-                    });
+                    selectedUserEmails.forEach(email => params.append('usuario_emails', email));
                 }
 
-                console.log('📈 [Metrics] URL final:', url);
+                const url = `${API_BASE_URL}/api/metricas/resumen?${params.toString()}`;
+                console.log('📊 [Metrics] Fetching from:', url);
 
                 const data = await fetchWithAuth(url);
-                setAllInvoicesForMetrics(data.items);
+
+                console.log('📊 [Metrics] RAW Response:', JSON.stringify(data, null, 2));
+
+                // Establecer métricas con valores por defecto si no existen
+                const metricsData = {
+                    PEN: data.PEN || { totalFacturado: 0, montoGanado: 0, montoDisponible: 0, cantidad: 0 },
+                    USD: data.USD || { totalFacturado: 0, montoGanado: 0, montoDisponible: 0, cantidad: 0 }
+                };
+
+                console.log('✅ [Metrics] Setting metrics:', JSON.stringify(metricsData, null, 2));
+                setMetrics(metricsData);
+
+                console.log('✅ [Metrics] Cargadas:', data);
             } catch (err) {
-                console.error('Error fetching metrics data:', err);
+                console.error('❌ [Metrics] Error fetching metrics:', err);
+                // Resetear a valores por defecto en caso de error
+                setMetrics({
+                    PEN: { totalFacturado: 0, montoGanado: 0, montoDisponible: 0, cantidad: 0 },
+                    USD: { totalFacturado: 0, montoGanado: 0, montoDisponible: 0, cantidad: 0 }
+                });
+            } finally {
+                setMetricsLoading(false);
             }
         };
 
-        fetchAllInvoicesForMetrics();
+        fetchMetrics();
     }, [startDate, endDate, selectedClientIds, selectedCurrencies, selectedUserEmails, firebaseUser, clients.length, users.length]);
 
     // Fetch ventas paginadas
@@ -270,7 +288,8 @@ export const useSunatData = (firebaseUser, dateFilter, selectedClientIds, select
 
     return {
         ventas,
-        allInvoicesForMetrics,
+        metrics,
+        metricsLoading,
         pagination,
         loading,
         error,

@@ -77,7 +77,8 @@ export default function App() {
     // Cargar datos de ventas y métricas
     const {
         ventas,
-        allInvoicesForMetrics,
+        metrics,
+        metricsLoading,
         pagination,
         loading,
         error,
@@ -146,55 +147,32 @@ export default function App() {
                 tieneNotaCredito: tieneNotaCredito
             };
         });
-        console.log('🔄 [App] Transformed invoices:', transformed.length);
         return transformed;
     }, [ventas, invoiceStatuses]);
 
-    // Transformar TODAS las facturas del período para métricas
-    const allInvoicesTransformed = useMemo(() => {
-        return allInvoicesForMetrics.map(venta => {
-            const invoiceId = `${venta.serie_cdp || ''}-${venta.nro_cp_inicial || venta.id}`;
-            const clientId = venta.ruc;
-            const statusKey = `${clientId}-${invoiceId}`;
-
-            let amount = 0;
-            if (venta.monto_original !== undefined && venta.monto_original !== null) {
-                amount = parseFloat(venta.monto_original);
-            } else if (venta.total_cp && venta.tipo_cambio && venta.tipo_cambio > 0) {
-                amount = parseFloat(venta.total_cp) / parseFloat(venta.tipo_cambio);
-            } else {
-                amount = parseFloat(venta.total_cp) || 0;
-            }
-
-            // Usar montoNeto si está disponible (para métricas correctas con notas de crédito)
-            const montoNeto = venta.monto_neto !== undefined && venta.monto_neto !== null ? parseFloat(venta.monto_neto) : amount;
-
-            return {
-                amount: montoNeto, // Usar monto neto para métricas
-                currency: venta.moneda,
-                status: invoiceStatuses[statusKey] || venta.estado1 || 'Sin gestión',
-            };
-        });
-    }, [allInvoicesForMetrics, invoiceStatuses]);
-
-    // Calcular métricas usando TODAS las facturas del período
+    // Calcular métricas con porcentaje de ganancia
+    // Los datos vienen pre-agregados del backend, solo añadimos winPercentage
     const monthlyMetrics = useMemo(() => {
-        const metrics = { PEN: {}, USD: {} };
-        ['PEN', 'USD'].forEach(currency => {
-            const ccyInvoices = allInvoicesTransformed.filter(inv => inv.currency === currency);
-            const totalFacturado = ccyInvoices.reduce((s, i) => s + i.amount, 0);
-            const montoGanado = ccyInvoices.filter(i => i.status === 'Ganada').reduce((s, i) => s + i.amount, 0);
-            // Monto disponible excluye "Ganada" y "Perdida"
-            const montoDisponible = ccyInvoices.filter(i => i.status !== 'Perdida' && i.status !== 'Ganada').reduce((s, i) => s + i.amount, 0);
-            metrics[currency] = {
-                totalFacturado,
-                montoGanado,
-                montoDisponible,
-                winPercentage: totalFacturado > 0 ? (montoGanado / totalFacturado) * 100 : 0
-            };
-        });
-        return metrics;
-    }, [allInvoicesTransformed]);
+        console.log('📈 [App.jsx] Calculando monthlyMetrics desde metrics:', JSON.stringify(metrics, null, 2));
+
+        const calculated = {
+            PEN: {
+                ...metrics.PEN,
+                winPercentage: metrics.PEN.totalFacturado > 0
+                    ? (metrics.PEN.montoGanado / metrics.PEN.totalFacturado) * 100
+                    : 0
+            },
+            USD: {
+                ...metrics.USD,
+                winPercentage: metrics.USD.totalFacturado > 0
+                    ? (metrics.USD.montoGanado / metrics.USD.totalFacturado) * 100
+                    : 0
+            }
+        };
+
+        console.log('📈 [App.jsx] monthlyMetrics calculado:', JSON.stringify(calculated, null, 2));
+        return calculated;
+    }, [metrics]);
 
     // Agrupar facturas (solo las de la página actual)
     const groupedInvoices = useMemo(() => {

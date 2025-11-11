@@ -36,9 +36,9 @@ def create_tables():
     """Crea las tablas en la base de datos al iniciar la aplicación"""
     try:
         Base.metadata.create_all(bind=engine)
-        print("✅ Tablas de base de datos creadas/verificadas exitosamente")
+        print("[OK] Tablas de base de datos creadas/verificadas exitosamente")
     except Exception as e:
-        print(f"⚠️ Error al crear tablas: {e}")
+        print(f"[ERROR] Error al crear tablas: {e}")
 
 # Configurar CORS
 app.add_middleware(
@@ -574,6 +574,14 @@ def get_metricas_resumen(
         if not authorized_rucs:
             raise HTTPException(status_code=403, detail="Usuario sin empresas autorizadas")
 
+        # Convertir fechas a objetos date (igual que en /api/ventas)
+        fecha_desde_date = datetime.strptime(fecha_desde, "%Y-%m-%d").date()
+        fecha_hasta_date = datetime.strptime(fecha_hasta, "%Y-%m-%d").date()
+
+        print(f"📊 [DEBUG] Params: fecha_desde={fecha_desde_date}, fecha_hasta={fecha_hasta_date}")
+        print(f"📊 [DEBUG] Filtros: rucs={rucs_empresa}, moneda={moneda}, usuarios={usuario_emails}")
+        print(f"📊 [DEBUG] Authorized RUCs: {authorized_rucs}")
+
         # Query optimizado con agregaciones en SQL
         query = db.query(
             VentaElectronica.moneda,
@@ -584,10 +592,20 @@ def get_metricas_resumen(
                     else_=0
                 )
             ).label('monto_ganado'),
+            func.sum(
+                case(
+                    (
+                        (VentaElectronica.estado1.is_(None)) |
+                        ((VentaElectronica.estado1 != 'Ganada') & (VentaElectronica.estado1 != 'Perdida')),
+                        VentaElectronica.total_cp
+                    ),
+                    else_=0
+                )
+            ).label('monto_disponible'),
             func.count(VentaElectronica.id).label('cantidad')
         ).filter(
-            VentaElectronica.fecha_emision >= fecha_desde,
-            VentaElectronica.fecha_emision <= fecha_hasta,
+            VentaElectronica.fecha_emision >= fecha_desde_date,
+            VentaElectronica.fecha_emision <= fecha_hasta_date,
             VentaElectronica.tipo_cp_doc != '7',  # Excluir NC
             ~VentaElectronica.serie_cdp.like('B%'),  # Excluir boletas
             VentaElectronica.ruc.in_(authorized_rucs)
@@ -612,19 +630,32 @@ def get_metricas_resumen(
         # Ejecutar query
         results = query.all()
 
-        # Transformar a diccionario
-        metricas = {}
+        print(f"📊 [DEBUG] Query results count: {len(results)}")
+        for row in results:
+            print(f"📊 [DEBUG] Row: moneda={row.moneda}, total={row.total_facturado}, ganado={row.monto_ganado}, disponible={row.monto_disponible}, count={row.cantidad}")
+
+        # Transformar a diccionario - SIEMPRE inicializar PEN y USD
+        metricas = {
+            "PEN": {"totalFacturado": 0, "montoGanado": 0, "montoDisponible": 0, "cantidad": 0},
+            "USD": {"totalFacturado": 0, "montoGanado": 0, "montoDisponible": 0, "cantidad": 0}
+        }
+
         for row in results:
             total_facturado = float(row.total_facturado or 0)
             monto_ganado = float(row.monto_ganado or 0)
+            monto_disponible = float(row.monto_disponible or 0)
 
-            metricas[row.moneda] = {
+            # Normalizar moneda (por si hay valores NULL o extraños)
+            moneda_key = row.moneda if row.moneda in ['PEN', 'USD'] else 'PEN'
+
+            metricas[moneda_key] = {
                 "totalFacturado": total_facturado,
                 "montoGanado": monto_ganado,
-                "montoDisponible": total_facturado - monto_ganado,
+                "montoDisponible": monto_disponible,
                 "cantidad": row.cantidad
             }
 
+        print(f"📊 [DEBUG] Final metricas: {metricas}")
         return metricas
 
     except HTTPException:

@@ -11,28 +11,7 @@ export default function LastUpdateIndicator({ firebaseUser }) {
     const formatDate = (timestamp) => {
         if (!timestamp) return 'Cargando...';
 
-        // TEST: Ver qué está llegando
-        console.log('🕐 [LastUpdate] Timestamp recibido:', timestamp);
-
         const date = new Date(timestamp);
-        console.log('🕐 [LastUpdate] Date object:', date);
-        console.log('🕐 [LastUpdate] UTC String:', date.toUTCString());
-        console.log('🕐 [LastUpdate] ISO String:', date.toISOString());
-
-        // Opción 1: Intl.DateTimeFormat con timezone
-        const formatter = new Intl.DateTimeFormat('es-PE', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false,
-            timeZone: 'America/Lima'
-        });
-        const formatted1 = formatter.format(date);
-        console.log('🕐 [LastUpdate] Intl.DateTimeFormat:', formatted1);
-
         // Opción 2: toLocaleString con timezone
         const formatted2 = date.toLocaleString('es-PE', {
             day: '2-digit',
@@ -44,12 +23,6 @@ export default function LastUpdateIndicator({ firebaseUser }) {
             hour12: false,
             timeZone: 'America/Lima'
         });
-        console.log('🕐 [LastUpdate] toLocaleString:', formatted2);
-
-        // Opción 3: Manual (restar 5 horas)
-        const peruDate = new Date(date.getTime());
-        const formatted3 = peruDate.toLocaleString('es-PE', { hour12: false });
-        console.log('🕐 [LastUpdate] Manual:', formatted3);
 
         return formatted2;
     };
