@@ -422,12 +422,14 @@ class VentaBackend(Base):
     estado1 = Column(String(20), nullable=True)
     estado2 = Column(String(50), nullable=True)
 
+    usuario_email = Column(String(255), nullable=True, index=True)
+    usuario_nombre = Column(String(255), nullable=True)
     # ==================================================================================
     # CAMPOS CALCULADOS (pre-computados en la vista materializada)
     # ==================================================================================
     tiene_nota_credito = Column(Boolean, comment="TRUE si tiene nota de crédito asociada")
-    monto_nota_credito = Column(Numeric(15, 2), comment="Suma de notas de crédito (negativo)")
-    total_neto = Column(Numeric(15, 2), comment="Total después de aplicar notas de crédito")
+    nota_credito_monto = Column(Numeric(15, 2), comment="Suma de notas de crédito (negativo)")
+    monto_neto = Column(Numeric(15, 2), comment="Total después de aplicar notas de crédito")
     notas_credito_asociadas = Column(String(500), comment="Serie-Número de NC asociadas")
 
     def __repr__(self):

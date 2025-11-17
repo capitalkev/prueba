@@ -50,6 +50,8 @@ SELECT
     v.estado1,
     v.estado2,
     v.ultima_actualizacion,
+    e.email as usuario_email,
+    u.nombre as usuario_nombre,
 
     -- CAMPOS CALCULADOS CON NOMBRES CORRECTOS
     -- monto_original: total_cp / tipo_cambio (SIN notas de crédito)
@@ -62,7 +64,7 @@ SELECT
      FROM ventas_sire nc
      WHERE nc.ruc = v.ruc
      AND nc.tipo_cp_doc = '7'
-     AND nc.nro_cp_modificado = v.nro_cp_inicial
+     AND TRIM(TRAILING '.0' FROM nc.nro_cp_modificado::text) = v.nro_cp_inicial
      AND nc.nro_doc_identidad = v.nro_doc_identidad
     ) as tiene_nota_credito,
 
@@ -76,7 +78,7 @@ SELECT
         FROM ventas_sire nc
         WHERE nc.ruc = v.ruc
         AND nc.tipo_cp_doc = '7'
-        AND nc.nro_cp_modificado = v.nro_cp_inicial
+        AND TRIM(TRAILING '.0' FROM nc.nro_cp_modificado::text) = v.nro_cp_inicial
         AND nc.nro_doc_identidad = v.nro_doc_identidad
     ), 0) as nota_credito_monto,
 
@@ -92,7 +94,7 @@ SELECT
         FROM ventas_sire nc
         WHERE nc.ruc = v.ruc
         AND nc.tipo_cp_doc = '7'
-        AND nc.nro_cp_modificado = v.nro_cp_inicial
+        AND TRIM(TRAILING '.0' FROM nc.nro_cp_modificado::text) = v.nro_cp_inicial
         AND nc.nro_doc_identidad = v.nro_doc_identidad
     ), 0) as monto_neto,
 
@@ -106,6 +108,8 @@ SELECT
     ) as notas_credito_asociadas
 
 FROM ventas_sire v
+LEFT JOIN enrolados e ON v.ruc = e.ruc
+LEFT JOIN usuarios u ON e.email = u.email
 WHERE v.tipo_cp_doc = '1'
     AND v.serie_cdp NOT LIKE 'B%'
     AND v.apellidos_nombres_razon_social != '-'
@@ -121,7 +125,8 @@ CREATE INDEX idx_ventas_backend_cliente ON ventas_backend(nro_doc_identidad);
 CREATE INDEX idx_ventas_backend_moneda ON ventas_backend(moneda);
 CREATE INDEX idx_ventas_backend_metricas ON ventas_backend(fecha_emision, moneda, estado1, monto_neto);
 CREATE INDEX idx_ventas_backend_con_nc ON ventas_backend(tiene_nota_credito) WHERE tiene_nota_credito = true;
-
+CREATE INDEX idx_ventas_backend_usuario_email ON ventas_backend(usuario_email) WHERE usuario_email IS NOT NULL;
+CREATE INDEX idx_ventas_backend_fecha_desc ON ventas_backend(fecha_emision DESC);
 -- Función de refresh
 CREATE OR REPLACE FUNCTION refresh_ventas_backend()
 RETURNS void AS $$

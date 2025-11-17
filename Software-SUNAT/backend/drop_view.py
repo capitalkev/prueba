@@ -46,12 +46,43 @@ except Exception as e:
     sys.exit(1)
 
 with engine.connect() as conn:
+    # Verificar bloqueos primero
+    print("[INFO] Verificando bloqueos en ventas_backend...")
+    try:
+        result = conn.execute(text("""
+            SELECT
+                l.pid,
+                a.usename,
+                a.application_name,
+                a.state,
+                LEFT(a.query, 100) as query
+            FROM pg_locks l
+            JOIN pg_stat_activity a ON l.pid = a.pid
+            WHERE l.relation = 'ventas_backend'::regclass
+        """))
+        locks = result.fetchall()
+        if locks:
+            print(f"[WARN] Hay {len(locks)} proceso(s) bloqueando la vista:")
+            for lock in locks:
+                print(f"  PID {lock[0]}: {lock[1]} - {lock[2]} - {lock[3]}")
+                print(f"    Query: {lock[4]}")
+            print()
+    except Exception as e:
+        # La vista podría no existir, continuar
+        print(f"[INFO] No se pudo verificar bloqueos (la vista podría no existir): {e}\n")
+
     print("[INFO] Eliminando vista materializada ventas_backend...")
     try:
+        # Intentar con timeout de 10 segundos
+        conn.execute(text("SET statement_timeout = '10s'"))
         conn.execute(text("DROP MATERIALIZED VIEW IF EXISTS ventas_backend CASCADE"))
         print("[OK] Vista eliminada\n")
     except Exception as e:
-        print(f"[ERROR] {e}\n")
+        print(f"[ERROR] {e}")
+        print("\n[SUGERENCIA] Si el error es por timeout o bloqueos:")
+        print("  1. Ejecuta 'python check_locks.py' para ver qué está bloqueando")
+        print("  2. Detén las aplicaciones que estén consultando la vista")
+        print("  3. O usa 'python kill_blocking_processes.py' (crear si es necesario)\n")
 
 engine.dispose()
 print("[OK] Listo")

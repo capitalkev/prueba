@@ -416,9 +416,7 @@ def get_ventas(
 ):
     """
     Obtiene ventas paginadas con filtros.
-    OPTIMIZADO: Usa vista materializada ventas_backend (90%+ más rápido)
-    Autenticación OBLIGATORIA: Filtra por RUCs según rol del usuario.
-    Admin ve todo, usuarios normales solo ven sus enrolados asignados.
+    OPTIMIZADO: Usa vista materializada ventas_backend
     """
     repo = VentaBackendRepository(db)
 
@@ -429,12 +427,6 @@ def get_ventas(
         datetime.strptime(fecha_hasta, "%Y-%m-%d").date() if fecha_hasta else None
     )
 
-    print("🎯 [ENDPOINT] GET /api/ventas recibió:")
-    print(f"  - usuario_email (deprecated): {usuario_email}")
-    print(f"  - usuario_emails (nuevo): {usuario_emails}")
-    print(f"  - fecha_desde: {fecha_desde}, fecha_hasta: {fecha_hasta}")
-    print(f"  - page: {page}, page_size: {page_size}")
-
     authorized_rucs = user_context["authorized_rucs"] if user_context else None
 
     emails_to_filter = (
@@ -442,8 +434,9 @@ def get_ventas(
         if usuario_emails
         else ([usuario_email] if usuario_email else None)
     )
-    print(f"🎯 [ENDPOINT] emails_to_filter calculado: {emails_to_filter}")
 
+    # --- RESTAURADO ---
+    # Esta función ahora devuelve (items, total_real)
     items, total = repo.get_ventas_paginadas(
         page=page,
         page_size=page_size,
@@ -457,17 +450,69 @@ def get_ventas(
         authorized_rucs=authorized_rucs,
         usuario_emails=emails_to_filter,
     )
+    # --- FIN DE RESTAURACIÓN ---
 
     items_with_calculation = [
         VentaResponse.from_orm_with_calculation(
-            venta, usuario_nombre, usuario_email, venta.monto_nota_credito
+            venta, usuario_nombre, usuario_email, venta.nota_credito_monto
         )
         for venta, usuario_nombre, usuario_email in items
     ]
 
+    # --- RESTAURADO ---
+    # Volvemos a crear la paginación usando el 'total' real
     return PaginatedResponse.create(
         items=items_with_calculation, total=total, page=page, page_size=page_size
     )
+    # --- FIN DE RESTAURACIÓN ---
+
+
+@app.get("/api/ventas/count")
+def get_ventas_count(
+    ruc_empresa: Optional[str] = Query(None, description="Filtrar por RUC de empresa"),
+    rucs_empresa: Optional[List[str]] = Query(
+        None, description="Filtrar por múltiples RUCs"
+    ),
+    periodo: Optional[str] = Query(None, description="Filtrar por periodo (YYYYMM)"),
+    fecha_desde: Optional[str] = Query(None, description="Fecha desde (YYYY-MM-DD)"),
+    fecha_hasta: Optional[str] = Query(None, description="Fecha hasta (YYYY-MM-DD)"),
+    moneda: Optional[str] = Query(
+        None, description="Filtrar por moneda: 'PEN' o 'USD'"
+    ),
+    usuario_emails: Optional[List[str]] = Query(
+        None, description="Filtrar por múltiples emails de usuario"
+    ),
+    user_context: dict = Depends(get_user_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Endpoint optimizado que SOLO cuenta las facturas.
+    Se llama de forma asíncrona desde el frontend.
+    """
+    repo = VentaBackendRepository(db)
+
+    fecha_desde_date = (
+        datetime.strptime(fecha_desde, "%Y-%m-%d").date() if fecha_desde else None
+    )
+    fecha_hasta_date = (
+        datetime.strptime(fecha_hasta, "%Y-%m-%d").date() if fecha_hasta else None
+    )
+
+    authorized_rucs = user_context["authorized_rucs"] if user_context else None
+
+    # Usamos la nueva función de repositorio que solo cuenta
+    total = repo.get_ventas_count(
+        ruc=ruc_empresa,
+        rucs_empresa=rucs_empresa,
+        periodo=periodo,
+        fecha_desde=fecha_desde_date,
+        fecha_hasta=fecha_hasta_date,
+        moneda=moneda,
+        authorized_rucs=authorized_rucs,
+        usuario_emails=usuario_emails,
+    )
+
+    return {"total_items": total}
 
 
 @app.get(
@@ -493,11 +538,12 @@ def get_ventas_by_periodo(
 
     items_with_calculation = [
         VentaResponse.from_orm_with_calculation(
-            venta, usuario_nombre, usuario_email, nota_credito_monto
+            venta, usuario_nombre, usuario_email, venta.nota_credito_monto
         )
-        for venta, usuario_nombre, usuario_email, nota_credito_monto in items
+        for venta, usuario_nombre, usuario_email in items
     ]
 
+    # total_pages se recalculará en el frontend cuando llegue el conteo real
     return PaginatedResponse.create(
         items=items_with_calculation, total=total, page=page, page_size=page_size
     )
@@ -640,6 +686,18 @@ def actualizar_estado_venta(
         venta.estado2 = None
 
     db.commit()
+
+    try:
+        # Refresca la vista en una transacción separada para que las métricas se actualicen
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+            conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY ventas_backend"))
+        logging.info(f"Vista ventas_backend refrescada (estado1={request.estado1})")
+    except Exception as e:
+        # Si el refresh falla (ej. por concurrencia), no rompemos la app.
+        # Los datos se actualizarán en el próximo refresh programado.
+        logging.error(f"Error al refrescar la vista: {e}")
+        pass
+
     db.refresh(venta)
 
     # Retornar la venta actualizada con cálculos
@@ -692,6 +750,16 @@ def actualizar_estado_perdida(
     venta.estado2 = request.estado2
 
     db.commit()
+
+    try:
+        # Refresca la vista en una transacción separada
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+            conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY ventas_backend"))
+        logging.info("Vista ventas_backend refrescada (estado1=Perdida)")
+    except Exception as e:
+        logging.error(f"Error al refrescar la vista: {e}")
+    pass
+
     db.refresh(venta)
 
     # Retornar la venta actualizada con cálculos
@@ -756,35 +824,22 @@ def get_metricas_resumen(
         try:
             logger.info("🔄 [Métricas] Intentando usar Materialized View...")
 
-            # Query OPTIMIZADO - usa ventas_backend (vista materializada) con total_neto (facturas - notas de crédito)
             query_sql = """
             SELECT
                 moneda,
                 SUM(CASE
                     WHEN tipo_cp_doc = '1' AND serie_cdp NOT LIKE 'B%%'
-                    THEN
-                        CASE
-                            WHEN moneda = 'USD' AND tipo_cambio IS NOT NULL AND tipo_cambio > 0 THEN total_neto / tipo_cambio
-                            ELSE total_neto
-                        END
+                    THEN monto_neto
                     ELSE 0
                 END)::numeric as total_facturado,
                 SUM(CASE
                     WHEN estado1 = 'Ganada' AND tipo_cp_doc = '1' AND serie_cdp NOT LIKE 'B%%'
-                    THEN
-                        CASE
-                            WHEN moneda = 'USD' AND tipo_cambio IS NOT NULL AND tipo_cambio > 0 THEN total_neto / tipo_cambio
-                            ELSE total_neto
-                        END
+                    THEN monto_neto
                     ELSE 0
                 END)::numeric as monto_ganado,
                 SUM(CASE
                     WHEN (estado1 IS NULL OR (estado1 != 'Ganada' AND estado1 != 'Perdida')) AND tipo_cp_doc = '1' AND serie_cdp NOT LIKE 'B%%'
-                    THEN
-                        CASE
-                            WHEN moneda = 'USD' AND tipo_cambio IS NOT NULL AND tipo_cambio > 0 THEN total_neto / tipo_cambio
-                            ELSE total_neto
-                        END
+                    THEN monto_neto
                     ELSE 0
                 END)::numeric as monto_disponible,
                 COUNT(CASE WHEN tipo_cp_doc = '1' AND serie_cdp NOT LIKE 'B%%' THEN id END)::integer as cantidad

@@ -15,7 +15,7 @@ echo ""
 
 # Variables (ajustar según tu proyecto)
 PROJECT_ID="operaciones-peru"
-SERVICE_NAME="backend-crm-sunat"
+SERVICE_NAME="crm-sunat-backend"
 REGION="southamerica-west1"
 CLOUD_SQL_INSTANCE="operaciones-peru:southamerica-west1:crm-sunat"
 

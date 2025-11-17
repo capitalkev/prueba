@@ -17,7 +17,8 @@ export const useSunatData = (
   sortBy,
   clients,
   users,
-  viewMode = "detailed"
+  viewMode = "detailed",
+  refreshTrigger = 0
 ) => {
   const [ventas, setVentas] = useState([]);
   const [metrics, setMetrics] = useState({
@@ -59,7 +60,7 @@ export const useSunatData = (
     );
   }, [selectedUserEmails]);
 
-  // Función para fetch con autenticación
+  // Función para fetch con autenticación (memorizada)
   const fetchWithAuth = async (url, options = {}) => {
     if (!firebaseUser) {
       console.error("fetchWithAuth: No hay usuario autenticado.");
@@ -156,20 +157,16 @@ export const useSunatData = (
       setErrorData(null);
 
       try {
-        // Construir URL del nuevo endpoint optimizado
         const params = new URLSearchParams({
           fecha_desde: startDate,
           fecha_hasta: endDate,
         });
 
-        // Aplicar filtro de monedas
         if (selectedCurrencies.length > 0) {
           selectedCurrencies.forEach((currency) =>
             params.append("moneda", currency)
           );
         }
-
-        // Aplicar filtro de clientes
         const shouldFilterClients =
           selectedClientIds.length > 0 &&
           (clients.length === 0 || selectedClientIds.length < clients.length);
@@ -178,13 +175,10 @@ export const useSunatData = (
             params.append("rucs_empresa", ruc)
           );
         }
-
-        // Aplicar filtro de usuarios
         const totalUserOptions = users.length + 1;
         const shouldFilterUsers =
           selectedUserEmails.length > 0 &&
           (users.length === 0 || selectedUserEmails.length < totalUserOptions);
-
         if (shouldFilterUsers) {
           selectedUserEmails.forEach((email) =>
             params.append("usuario_emails", email)
@@ -196,76 +190,22 @@ export const useSunatData = (
 
         const data = await fetchWithAuth(url);
 
-        console.log(
-          "📊 [Metrics] RAW Response:",
-          JSON.stringify(data, null, 2)
-        );
-
         let metricsData;
         if (data.PEN && data.USD) {
-          // Es el formato nuevo optimizado (ideal)
-          metricsData = {
-            PEN: data.PEN,
-            USD: data.USD,
-          };
-        } else if (data.total_pen !== undefined) {
-          // Es el formato antiguo del endpoint /api/metricas/{periodo}
-          // Aquí debemos asumir que todo el 'total' es 'montoDisponible' si no hay estado Ganada/Perdida
-          metricsData = {
-            PEN: {
-              totalFacturado: data.total_pen,
-              montoGanado: 0,
-              montoDisponible: data.total_pen,
-              cantidad: data.facturas_pen,
-            },
-            USD: {
-              totalFacturado: data.total_usd,
-              montoGanado: 0,
-              montoDisponible: data.total_usd,
-              cantidad: data.facturas_usd,
-            },
-          };
+          metricsData = { PEN: data.PEN, USD: data.USD };
         } else {
-          // Si la MV no tiene datos, retorna valores por defecto
           metricsData = {
-            PEN: {
-              totalFacturado: 0,
-              montoGanado: 0,
-              montoDisponible: 0,
-              cantidad: 0,
-            },
-            USD: {
-              totalFacturado: 0,
-              montoGanado: 0,
-              montoDisponible: 0,
-              cantidad: 0,
-            },
+            PEN: { totalFacturado: 0, montoGanado: 0, montoDisponible: 0, cantidad: 0 },
+            USD: { totalFacturado: 0, montoGanado: 0, montoDisponible: 0, cantidad: 0 }
           };
         }
-
-        console.log(
-          "✅ [Metrics] Setting metrics:",
-          JSON.stringify(metricsData, null, 2)
-        );
         setMetrics(metricsData);
 
-        console.log("✅ [Metrics] Cargadas:", data);
       } catch (err) {
         console.error("❌ [Metrics] Error fetching metrics:", err);
-        // Resetear a valores por defecto en caso de error
         setMetrics({
-          PEN: {
-            totalFacturado: 0,
-            montoGanado: 0,
-            montoDisponible: 0,
-            cantidad: 0,
-          },
-          USD: {
-            totalFacturado: 0,
-            montoGanado: 0,
-            montoDisponible: 0,
-            cantidad: 0,
-          },
+          PEN: { totalFacturado: 0, montoGanado: 0, montoDisponible: 0, cantidad: 0 },
+          USD: { totalFacturado: 0, montoGanado: 0, montoDisponible: 0, cantidad: 0 }
         });
       } finally {
         setMetricsLoading(false);
@@ -274,51 +214,26 @@ export const useSunatData = (
 
     fetchMetrics();
   }, [
-    startDate,
-    endDate,
-    selectedClientIds,
-    selectedCurrencies,
-    selectedUserEmails,
-    firebaseUser,
-    clients.length,
-    users.length,
+    startDate, endDate, selectedClientIds, selectedCurrencies,
+    selectedUserEmails, firebaseUser, clients.length, users.length, refreshTrigger
   ]);
 
   // Fetch ventas paginadas
   useEffect(() => {
-    console.log("🚀 [useSunatData] useEffect de fetchVentas EJECUTÁNDOSE:", {
-      firebaseUser: !!firebaseUser,
-      startDate,
-      endDate,
-      selectedUserEmails_count: selectedUserEmails.length,
-      selectedUserEmails,
-    });
-
-    if (!firebaseUser || !startDate || !endDate) {
-      console.log(
-        "⛔ [useSunatData] useEffect abortado - faltan datos básicos"
-      );
-      return;
-    }
+    if (!firebaseUser || !startDate || !endDate) return;
 
     const fetchVentas = async () => {
-      console.log("🎬 [useSunatData] Iniciando fetchVentas...");
+      console.log("🚀 [useSunatData] Iniciando fetchVentas (Versión Original)...");
       try {
         setLoading(true);
         setError(null);
 
-        // En modo agrupado, traer más facturas para generar más grupos
         const pageSize = viewMode === "grouped" ? 100 : 20;
-
-        // Construir URL base
         let url = `${API_BASE_URL}/api/ventas?page=${currentPage}&page_size=${pageSize}&fecha_desde=${startDate}&fecha_hasta=${endDate}&sort_by=${sortBy}`;
 
-        // Aplicar filtro de monedas (solo si hay exactamente 1 seleccionada)
         if (selectedCurrencies.length === 1) {
           url += `&moneda=${selectedCurrencies[0]}`;
         }
-
-        // Aplicar filtro de clientes (si hay clientes seleccionados y no son todos)
         const shouldFilterClients =
           selectedClientIds.length > 0 &&
           (clients.length === 0 || selectedClientIds.length < clients.length);
@@ -327,22 +242,10 @@ export const useSunatData = (
             url += `&rucs_empresa=${ruc}`;
           });
         }
-
-        // Aplicar filtro de usuarios (si hay usuarios seleccionados y no son todos)
-        const totalUserOptions = users.length + 1; // +1 por "Sin asignar"
+        const totalUserOptions = users.length + 1;
         const shouldFilterUsers =
           selectedUserEmails.length > 0 &&
           (users.length === 0 || selectedUserEmails.length < totalUserOptions);
-
-        console.log("📊 [Ventas] Construyendo filtros:", {
-          selectedUserEmails,
-          users_length: users.length,
-          totalUserOptions,
-          shouldFilterUsers,
-          selectedClientIds_length: selectedClientIds.length,
-          clients_length: clients.length,
-        });
-
         if (shouldFilterUsers) {
           selectedUserEmails.forEach((email) => {
             url += `&usuario_emails=${email}`;
@@ -352,16 +255,7 @@ export const useSunatData = (
         console.log("📊 [Ventas] URL final:", url);
 
         const data = await fetchWithAuth(url);
-        console.log("📊 [Ventas] API Response:", {
-          items_count: data.items.length,
-          pagination: data.pagination,
-          filters: {
-            clients: selectedClientIds.length,
-            currencies: selectedCurrencies.length,
-            users: selectedUserEmails.length,
-          },
-        });
-        // Mapear snake_case del backend a camelCase para el frontend
+
         const mappedItems = data.items.map(item => ({
           ...item,
           montoNeto: item.monto_neto,
@@ -375,12 +269,7 @@ export const useSunatData = (
       } catch (err) {
         console.error("Error fetching ventas:", err);
         setVentas([]);
-        setPagination({
-          page: 1,
-          page_size: 20,
-          total_items: 0,
-          total_pages: 0,
-        });
+        setPagination({ page: 1, page_size: 20, total_items: 0, total_pages: 0, has_next: false, has_previous: false });
         setError(err.message);
       } finally {
         setLoading(false);
@@ -389,17 +278,8 @@ export const useSunatData = (
 
     fetchVentas();
   }, [
-    startDate,
-    endDate,
-    currentPage,
-    selectedClientIds,
-    clients.length,
-    sortBy,
-    selectedCurrencies,
-    selectedUserEmails,
-    firebaseUser,
-    viewMode,
-    users.length,
+    startDate, endDate, currentPage, selectedClientIds, clients.length,
+    sortBy, selectedCurrencies, selectedUserEmails, firebaseUser, viewMode, users.length, refreshTrigger
   ]);
 
   return {

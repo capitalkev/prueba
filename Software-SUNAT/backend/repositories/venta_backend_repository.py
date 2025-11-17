@@ -24,6 +24,7 @@ class VentaBackendRepository(BaseRepository[VentaBackend]):
 
     def __init__(self, db: Session):
         super().__init__(VentaBackend, db)
+        
 
     def get_ventas_paginadas(
         self,
@@ -59,16 +60,11 @@ class VentaBackendRepository(BaseRepository[VentaBackend]):
             Tuple de (lista de tuplas (venta, usuario_nombre, usuario_email), total_count)
         """
 
-        # Query SIMPLE - sin subqueries complejos
         query = self.db.query(
             VentaBackend,
-            Usuario.nombre.label('usuario_nombre'),
-            Usuario.email.label('usuario_email')
-        ).outerjoin(
-            Enrolado, VentaBackend.ruc == Enrolado.ruc
-        ).outerjoin(
-            Usuario, Enrolado.email == Usuario.email
-        )
+            VentaBackend.usuario_nombre,
+            VentaBackend.usuario_email
+        ).filter(VentaBackend.tipo_cp_doc == "1")
 
         # Aplicar filtros
         if authorized_rucs is not None:
@@ -96,28 +92,28 @@ class VentaBackendRepository(BaseRepository[VentaBackend]):
             if "UNASSIGNED" in usuario_emails:
                 # Incluir sin asignar + los especificados
                 query = query.filter(
-                    (Enrolado.email.is_(None)) | (Enrolado.email.in_(usuario_emails))
+                    (VentaBackend.usuario_email.is_(None)) | (VentaBackend.usuario_email.in_(usuario_emails))
                 )
             else:
-                query = query.filter(Enrolado.email.in_(usuario_emails))
+                query = query.filter(VentaBackend.usuario_email.in_(usuario_emails))
 
         # Contar total
         total = query.count()
 
         # Ordenamiento
         if sort_by == "monto":
-            query = query.order_by(desc(VentaBackend.total_neto))
+            query = query.order_by(desc(VentaBackend.monto_neto))
         else:
             # Por defecto: fecha descendente
             query = query.order_by(
-                desc(VentaBackend.fecha_emision),
-                desc(VentaBackend.id)
+                desc(VentaBackend.fecha_emision), desc(VentaBackend.id)
             )
 
         # Paginación
         offset = (page - 1) * page_size
         items = query.limit(page_size).offset(offset).all()
 
+        # Devolvemos 0 como total, ya no lo calculamos aquí
         return items, total
 
     def get_empresas_unicas_por_periodo(
@@ -137,10 +133,7 @@ class VentaBackendRepository(BaseRepository[VentaBackend]):
         Returns:
             Lista de dict con {ruc, razon_social}
         """
-        query = self.db.query(
-            VentaBackend.ruc,
-            VentaBackend.razon_social
-        ).distinct()
+        query = self.db.query(VentaBackend.ruc, VentaBackend.razon_social).distinct()
 
         # Aplicar filtros
         if authorized_rucs is not None:
@@ -150,18 +143,15 @@ class VentaBackendRepository(BaseRepository[VentaBackend]):
             query = query.filter(VentaBackend.periodo == periodo)
 
         if usuario_emails and len(usuario_emails) > 0:
-            query = query.join(
-                Enrolado, VentaBackend.ruc == Enrolado.ruc
-            ).filter(Enrolado.email.in_(usuario_emails))
+            query = query.join(Enrolado, VentaBackend.ruc == Enrolado.ruc).filter(
+                Enrolado.email.in_(usuario_emails)
+            )
 
         query = query.order_by(VentaBackend.razon_social)
 
         results = query.all()
 
-        return [
-            {"ruc": row.ruc, "razon_social": row.razon_social}
-            for row in results
-        ]
+        return [{"ruc": row.ruc, "razon_social": row.razon_social} for row in results]
 
     def get_metricas_periodo(
         self,
@@ -185,10 +175,10 @@ class VentaBackendRepository(BaseRepository[VentaBackend]):
         query = self.db.query(
             VentaBackend.moneda,
             func.sum(VentaBackend.total_neto).label("total_facturado"),
-            func.count(VentaBackend.id).label("cantidad")
+            func.count(VentaBackend.id).label("cantidad"),
         ).filter(
             VentaBackend.periodo == periodo,
-            VentaBackend.tipo_cp_doc != '7'  # Excluir notas de crédito
+            VentaBackend.tipo_cp_doc != "7",  # Excluir notas de crédito
         )
 
         # Filtros de acceso

@@ -57,21 +57,21 @@ const InvoiceTable = ({
                 onConfirm={handleLossConfirm}
                 invoiceId={pendingLossInvoice?.id}
             />
-        <table className="w-full text-sm text-left text-gray-600">
+        <table className="w-full text-sm text-left text-gray-600 table-fixed">
             <thead className="bg-gray-50 text-xs text-gray-700 uppercase">
                 <tr>
-                    <th className="px-4 py-3 w-8">
+                    <th className="px-4 py-3 w-[5%]">
                         <input
                             type="checkbox"
                             onChange={(e) => onSelectAll(e.target.checked)}
                             className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                     </th>
-                    <th className="px-4 py-3">Usuario</th>
-                    <th className="px-4 py-3">Cliente</th>
-                    <th className="px-4 py-3">Factura</th>
-                    <th className="px-4 py-3">Deudor</th>
-                    <th className="px-4 py-3">
+                    <th className="px-4 py-3 w-[15%]">Usuario</th>
+                    <th className="px-4 py-3 w-[20%]">Cliente</th>
+                    <th className="px-4 py-3 w-[12%]">Factura</th>
+                    <th className="px-4 py-3 w-[20%]">Deudor</th>
+                    <th className="px-4 py-3 w-[10%]">
                         <button
                             onClick={() => onSortChange('monto')}
                             className="flex items-center gap-1 hover:text-blue-600 transition-colors"
@@ -84,7 +84,7 @@ const InvoiceTable = ({
                             )}
                         </button>
                     </th>
-                    <th className="px-4 py-3">
+                    <th className="px-4 py-3 w-[10%]">
                         <button
                             onClick={() => onSortChange('fecha')}
                             className="flex items-center gap-1 hover:text-blue-600 transition-colors"
@@ -97,7 +97,7 @@ const InvoiceTable = ({
                             )}
                         </button>
                     </th>
-                    <th className="px-4 py-3">Estatus</th>
+                    <th className="px-4 py-3 w-[8%]">Estatus</th>
                 </tr>
             </thead>
             <tbody>
