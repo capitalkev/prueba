@@ -361,7 +361,16 @@ export const useSunatData = (
             users: selectedUserEmails.length,
           },
         });
-        setVentas(data.items);
+        // Mapear snake_case del backend a camelCase para el frontend
+        const mappedItems = data.items.map(item => ({
+          ...item,
+          montoNeto: item.monto_neto,
+          tieneNotaCredito: item.tiene_nota_credito,
+          amount: item.monto_original,
+          notaCreditoMonto: item.nota_credito_monto
+        }));
+
+        setVentas(mappedItems);
         setPagination(data.pagination);
       } catch (err) {
         console.error("Error fetching ventas:", err);

@@ -1,6 +1,6 @@
 // --- Configuración de la API ---
 // URL del backend de SUNAT en Cloud Run (producción)
-export const API_BASE_URL = 'https://sunat-backend-598125168090.southamerica-west1.run.app';
+export const API_BASE_URL = 'https://crm-sunat-backend-598125168090.southamerica-west1.run.app';
 
 // --- Estados de facturas ---
 export const INVOICE_STATUSES = [

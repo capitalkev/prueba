@@ -349,6 +349,91 @@ class VentaSire(Base):
         return f"<VentaSire(ruc={self.ruc}, periodo={self.periodo}, cliente={self.nro_doc_identidad}, total={self.total_cp})>"
 
 
+class VentaBackend(Base):
+    """
+    Vista materializada optimizada para consultas del backend.
+    Incluye cálculos pre-procesados de notas de crédito y totales netos.
+    NO usar insert/update/delete en este modelo - es solo lectura.
+    """
+
+    __tablename__ = "ventas_backend"
+
+    # Metadata y claves
+    id = Column(Integer, primary_key=True)
+    ruc = Column(String(11), nullable=False, index=True)
+    razon_social = Column(String(500))
+    periodo = Column(String(6), nullable=False, index=True)
+    car_sunat = Column(String(100))
+    ultima_actualizacion = Column(DateTime, nullable=False)
+
+    # Fechas
+    fecha_emision = Column(Date)
+    fecha_vcto_pago = Column(Date)
+
+    # Información del comprobante
+    tipo_cp_doc = Column(String(10))
+    serie_cdp = Column(String(20))
+    nro_cp_inicial = Column(String(50))
+    nro_final = Column(String(50))
+
+    # Información del cliente
+    tipo_doc_identidad = Column(String(2))
+    nro_doc_identidad = Column(String(15), index=True)
+    apellidos_nombres_razon_social = Column(String(500))
+
+    # Valores y bases imponibles
+    valor_facturado_exportacion = Column(Numeric(15, 2))
+    bi_gravada = Column(Numeric(15, 2))
+    dscto_bi = Column(Numeric(15, 2))
+    igv_ipm = Column(Numeric(15, 2))
+    dscto_igv_ipm = Column(Numeric(15, 2))
+    mto_exonerado = Column(Numeric(15, 2))
+    mto_inafecto = Column(Numeric(15, 2))
+
+    # Otros tributos
+    isc = Column(Numeric(15, 2))
+    bi_grav_ivap = Column(Numeric(15, 2))
+    ivap = Column(Numeric(15, 2))
+    icbper = Column(Numeric(15, 2))
+    otros_tributos = Column(Numeric(15, 2))
+    total_cp = Column(Numeric(15, 2))
+
+    # Moneda y tipo de cambio
+    moneda = Column(String(3))
+    tipo_cambio = Column(Numeric(10, 4))
+
+    # Información de documentos modificados
+    fecha_emision_doc_modificado = Column(Date)
+    tipo_cp_modificado = Column(String(10))
+    serie_cp_modificado = Column(String(20))
+    nro_cp_modificado = Column(String(50))
+
+    # Información adicional
+    id_proyecto_operadores_atribucion = Column(String(50))
+    tipo_nota = Column(String(10))
+    est_comp = Column(String(5))
+    valor_fob_embarcado = Column(Numeric(15, 2))
+    valor_op_gratuitas = Column(Numeric(15, 2))
+    tipo_operacion = Column(String(10))
+    dam_cp = Column(String(50))
+    clu = Column(String(200))
+
+    # Estados de gestión CRM
+    estado1 = Column(String(20), nullable=True)
+    estado2 = Column(String(50), nullable=True)
+
+    # ==================================================================================
+    # CAMPOS CALCULADOS (pre-computados en la vista materializada)
+    # ==================================================================================
+    tiene_nota_credito = Column(Boolean, comment="TRUE si tiene nota de crédito asociada")
+    monto_nota_credito = Column(Numeric(15, 2), comment="Suma de notas de crédito (negativo)")
+    total_neto = Column(Numeric(15, 2), comment="Total después de aplicar notas de crédito")
+    notas_credito_asociadas = Column(String(500), comment="Serie-Número de NC asociadas")
+
+    def __repr__(self):
+        return f"<VentaBackend(id={self.id}, ruc={self.ruc}, periodo={self.periodo}, total_neto={self.total_neto})>"
+
+
 # Alias para backward compatibility con código legacy
 CompraElectronica = CompraSire
 VentaElectronica = VentaSire

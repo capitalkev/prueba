@@ -95,7 +95,6 @@ class VentaResponse(BaseModel):
     # Estados de gestión CRM
     estado1: Optional[str] = "Sin gestión"  # Estado de gestión: Sin gestión, Gestionando, Ganada, Perdida
     estado2: Optional[str] = None  # Motivo de pérdida cuando estado1 = Perdida
-
     model_config = ConfigDict(from_attributes=True)
 
     @classmethod
@@ -142,8 +141,18 @@ class VentaResponse(BaseModel):
             data["monto_original"] = float(venta.total_cp) if venta.total_cp else None
             logging.warning(f"⚠️ Sin tipo_cambio: total_cp={venta.total_cp}, tipo_cambio={venta.tipo_cambio}")
 
-        # Calcular monto_neto y datos de nota de crédito
-        if nota_credito_monto is not None and nota_credito_monto != 0:
+        # Usar valores pre-calculados de la vista materializada si existen
+        # La vista usa: total_neto, monto_nota_credito, tiene_nota_credito
+        if hasattr(venta, 'total_neto') and venta.total_neto is not None:
+            # Usar valores pre-calculados de la vista materializada
+            # total_neto ya está en la moneda correcta (sin dividir por tipo_cambio nuevamente)
+            data["monto_neto"] = float(venta.total_neto)
+            data["tiene_nota_credito"] = getattr(venta, 'tiene_nota_credito', False)
+            data["nota_credito_monto"] = float(venta.monto_nota_credito) if hasattr(venta, 'monto_nota_credito') and venta.monto_nota_credito is not None else None
+            # Actualizar monto_original para que sea consistente con total_cp (sin dividir tipo_cambio)
+            data["monto_original"] = float(venta.total_cp) if venta.total_cp else None
+        elif nota_credito_monto is not None and nota_credito_monto != 0:
+            # Fallback: calcular si no vienen de la vista materializada
             data["nota_credito_monto"] = float(nota_credito_monto)
             data["tiene_nota_credito"] = True
             # Calcular monto_neto: total_cp + nota_credito_monto (nota_credito_monto ya incluye el signo)
